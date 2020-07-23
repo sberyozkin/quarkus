@@ -149,6 +149,7 @@
                                     <cleanupServer>true</cleanupServer>
                                     <enableHttpUrlHandler>true</enableHttpUrlHandler>
                                     <graalvmHome>${graalvmHome}</graalvmHome>
+                                    <additionalBuildArgs>--report-unsupported-elements-at-runtime</additionalBuildArgs>
                                 </configuration>
                             </execution>
                         </executions>
