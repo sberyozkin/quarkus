@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
@@ -26,6 +27,7 @@ import io.quarkus.oidc.OidcTenantConfig.Credentials;
 import io.quarkus.oidc.OidcTenantConfig.Credentials.Secret;
 import io.quarkus.oidc.RefreshToken;
 import io.quarkus.security.AuthenticationFailedException;
+import io.quarkus.security.identity.AuthenticationRequestContext;
 import io.quarkus.security.identity.IdentityProviderManager;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
@@ -123,8 +125,15 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                                 throw new AuthenticationCompletionException(cause);
                             }
                             LOG.debug("Token has expired, trying to refresh it");
-                            SecurityIdentity identity = trySilentRefresh(configContext,
-                                    refreshToken, context, identityProviderManager);
+
+                            AuthenticationRequestContext authContext = context
+                                    .get(AuthenticationRequestContext.class.getName());
+                            SecurityIdentity identity = authContext.runBlocking(new Supplier<SecurityIdentity>() {
+                                @Override
+                                public SecurityIdentity get() {
+                                    return trySilentRefresh(configContext, refreshToken, context, identityProviderManager);
+                                }
+                            }).await().indefinitely();
                             if (identity == null) {
                                 LOG.debug("SecurityIdentity is null after a token refresh");
                                 throw new AuthenticationCompletionException();

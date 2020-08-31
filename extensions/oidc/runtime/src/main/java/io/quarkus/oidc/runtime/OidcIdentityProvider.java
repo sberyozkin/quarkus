@@ -44,6 +44,7 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
             AuthenticationRequestContext context) {
         ContextAwareTokenCredential credential = (ContextAwareTokenCredential) request.getToken();
         RoutingContext vertxContext = credential.getContext();
+        vertxContext.put(AuthenticationRequestContext.class.getName(), context);
         return Uni.createFrom().deferred(new Supplier<Uni<SecurityIdentity>>() {
             @Override
             public Uni<SecurityIdentity> get() {
