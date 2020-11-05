@@ -31,6 +31,14 @@ public class CustomTenantConfigResolver implements TenantConfigResolver {
             config.setAuthServerUrl(authServerUri);
             config.setClientId("client");
             return config;
+        } else if ("tenant-oidc-introspection-blocked".equals(tenantId)) {
+            OidcTenantConfig config = new OidcTenantConfig();
+            config.setTenantId("tenant-oidc-introspection-blocked");
+            String uri = context.request().absoluteURI();
+            String authServerUri = uri.replace("/tenant/tenant-oidc-introspection-blocked/api/user", "/oidc");
+            config.setAuthServerUrl(authServerUri);
+            config.setClientId("client");
+            return config;
         } else if ("tenant-oidc-no-discovery".equals(tenantId)) {
             OidcTenantConfig config = new OidcTenantConfig();
             config.setTenantId("tenant-oidc-no-discovery");

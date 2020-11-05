@@ -4,6 +4,7 @@ import java.time.Duration;
 
 import org.jboss.logging.Logger;
 
+import io.quarkus.security.AuthenticationFailedException;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.oauth2.OAuth2Auth;
 
@@ -30,6 +31,9 @@ public class JwkSetRefreshHandler implements Handler<String> {
                     LOG.debugf("Failed to refresh the JWK set: %s", res.cause());
                 }
             });
+        } else {
+            LOG.debug("JWK set refresh interval has not expired yet");
+            throw new AuthenticationFailedException();
         }
     }
 }

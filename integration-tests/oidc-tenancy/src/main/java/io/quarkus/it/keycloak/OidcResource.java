@@ -22,6 +22,7 @@ public class OidcResource {
     UriInfo ui;
     RsaJsonWebKey key;
     private volatile boolean introspection;
+    private volatile int introspectionEndpointCallCount;
     private volatile boolean rotate;
     private volatile int jwkEndpointCallCount;
 
@@ -77,6 +78,7 @@ public class OidcResource {
     @Produces("application/json")
     @Path("introspect")
     public String introspect() {
+        introspectionEndpointCallCount++;
         // Introspect call will return an active token status only when the introspection is disallowed.
         // This is done to test that an asynchronous JWK refresh call done by Vertx Auth is effective.
         return "{" +
@@ -84,6 +86,19 @@ public class OidcResource {
                 "   \"scope\": \"user\"," +
                 "   \"username\": \"alice\"" +
                 "  }";
+    }
+
+    @GET
+    @Path("introspection-endpoint-call-count")
+    public int introspectionEndpointCallCount() {
+        return introspectionEndpointCallCount;
+    }
+
+    @POST
+    @Path("introspection-endpoint-call-count")
+    public int resetIntrospectionEndpointCallCount() {
+        introspectionEndpointCallCount = 0;
+        return introspectionEndpointCallCount;
     }
 
     @POST
