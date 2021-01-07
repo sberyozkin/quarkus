@@ -41,7 +41,7 @@ public class BouncyCastleJsseTestCase {
             return;
         }
         doTestListProviders();
-        checkLog(false);
+        checkLog();
     }
 
     protected void doTestListProviders() {
@@ -60,7 +60,7 @@ public class BouncyCastleJsseTestCase {
                 .body(containsString("BC,BCJSSE,SunJSSE"));
     }
 
-    protected void checkLog(boolean serverOnly) {
+    protected void checkLog() {
         final Path logDirectory = Paths.get(".", "target");
         given().pollInterval(100, TimeUnit.MILLISECONDS)
                 .atMost(10, TimeUnit.SECONDS)
@@ -75,7 +75,7 @@ public class BouncyCastleJsseTestCase {
                         }
                         Assertions.assertTrue(fileExists, "access log file " + accessLogFilePath + " is missing");
 
-                        boolean checkClientPassed = serverOnly;
+                        boolean checkClientPassed = false;
                         boolean checkServerPassed = false;
 
                         StringBuilder sbLog = new StringBuilder();
