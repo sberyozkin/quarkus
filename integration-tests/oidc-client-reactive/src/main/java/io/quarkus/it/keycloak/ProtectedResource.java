@@ -8,11 +8,15 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
+import org.jboss.logging.Logger;
+
 import io.quarkus.security.Authenticated;
 
 @Path("/protected")
 @Authenticated
 public class ProtectedResource {
+
+    private static final Logger LOG = Logger.getLogger(ProtectedResource.class);
 
     @Inject
     Principal principal;
@@ -22,7 +26,9 @@ public class ProtectedResource {
     @Produces("text/plain")
     @Path("userName")
     public String principalName() {
-        return principal.getName();
+        String principalName = principal.getName();
+        LOG.errorf("ProtectedResource:getUseName returns '%s'", principalName);
+        return principalName;
     }
 
     @GET

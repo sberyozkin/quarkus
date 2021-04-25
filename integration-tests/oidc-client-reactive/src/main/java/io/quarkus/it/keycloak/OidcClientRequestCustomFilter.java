@@ -38,6 +38,7 @@ public class OidcClientRequestCustomFilter extends AbstractTokensProducer implem
             @Override
             public void accept(Tokens tokens) {
                 requestContext.resume();
+                LOG.errorf("OidcClientRequestCustomFilter sets Bearer token '%s' ", tokens.getAccessToken());
                 requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE + tokens.getAccessToken());
             }
         }, new Consumer<Throwable>() {
