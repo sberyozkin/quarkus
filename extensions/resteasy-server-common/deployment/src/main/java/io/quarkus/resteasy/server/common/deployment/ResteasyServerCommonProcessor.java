@@ -88,7 +88,7 @@ public class ResteasyServerCommonProcessor {
     private static final DotName HTTP_SERVLET_REQUEST_NAME = DotName
             .createSimple("javax.servlet.http.HttpServletRequest");
     private static final DotName SERVLET_REQUEST_NAME = DotName
-            .createSimple("javax.servlet.http.ServletRequest");
+            .createSimple("javax.servlet.ServletRequest");
 
     private static final String JAX_RS_APPLICATION_PARAMETER_NAME = "javax.ws.rs.Application";
 
