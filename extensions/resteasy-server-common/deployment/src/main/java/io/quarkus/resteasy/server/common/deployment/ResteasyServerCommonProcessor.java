@@ -85,6 +85,11 @@ public class ResteasyServerCommonProcessor {
 
     private static final Logger log = Logger.getLogger("io.quarkus.resteasy");
 
+    private static final DotName HTTP_SERVLET_REQUEST_NAME = DotName
+            .createSimple("javax.servlet.http.HttpServletRequest");
+    private static final DotName SERVLET_REQUEST_NAME = DotName
+            .createSimple("javax.servlet.http.ServletRequest");
+
     private static final String JAX_RS_APPLICATION_PARAMETER_NAME = "javax.ws.rs.Application";
 
     private static final DotName JSONB_ANNOTATION = DotName.createSimple("javax.json.bind.annotation.JsonbAnnotation");
@@ -513,6 +518,13 @@ public class ResteasyServerCommonProcessor {
         beanDefiningAnnotations
                 .produce(new BeanDefiningAnnotationBuildItem(ResteasyDotNames.APPLICATION_PATH,
                         BuiltinScope.SINGLETON.getName()));
+    }
+
+    @BuildStep
+    void prepareServletApiProxy(BuildProducer<NativeImageProxyDefinitionBuildItem> proxyProducer) {
+
+        proxyProducer.produce(new NativeImageProxyDefinitionBuildItem(
+                HTTP_SERVLET_REQUEST_NAME.toString(), SERVLET_REQUEST_NAME.toString()));
     }
 
     private boolean hasAutoInjectAnnotation(Set<DotName> autoInjectAnnotationNames, ClassInfo clazz) {
