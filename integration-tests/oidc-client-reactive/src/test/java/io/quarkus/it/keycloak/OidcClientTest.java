@@ -46,6 +46,7 @@ public class OidcClientTest {
                 .body(equalTo("alice"));
     }
 
+    @Test
     public void testGetUserNameReactiveAndRefreshTokens() {
         RestAssured.given().header("Accept", "text/plain")
                 .when().get("/frontend/userNameReactive")
