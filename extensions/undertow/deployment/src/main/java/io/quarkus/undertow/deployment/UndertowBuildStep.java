@@ -100,6 +100,7 @@ import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.ObjectSubstitutionBuildItem;
 import io.quarkus.deployment.builditem.ServiceStartBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageProxyDefinitionBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
@@ -132,6 +133,8 @@ import io.vertx.ext.web.RoutingContext;
 //TODO: break this up, it is getting too big
 public class UndertowBuildStep {
 
+    private static final DotName HTTP_SERVLET_REQUEST_NAME = DotName.createSimple("javax.servlet.http.HttpServletRequest");
+    private static final DotName SERVLET_REQUEST_NAME = DotName.createSimple("javax.servlet.ServletRequest");
     public static final DotName WEB_FILTER = DotName.createSimple(WebFilter.class.getName());
     public static final DotName WEB_LISTENER = DotName.createSimple(WebListener.class.getName());
     public static final DotName WEB_SERVLET = DotName.createSimple(WebServlet.class.getName());
@@ -153,6 +156,13 @@ public class UndertowBuildStep {
     @BuildStep
     public FeatureBuildItem setupCapability() {
         return new FeatureBuildItem(Feature.SERVLET);
+    }
+
+    @BuildStep
+    void prepareServletApiProxy(BuildProducer<NativeImageProxyDefinitionBuildItem> proxyProducer) {
+
+        proxyProducer.produce(new NativeImageProxyDefinitionBuildItem(
+                HTTP_SERVLET_REQUEST_NAME.toString(), SERVLET_REQUEST_NAME.toString()));
     }
 
     @BuildStep
