@@ -25,9 +25,9 @@ import io.quarkus.vertx.http.runtime.HttpConfiguration;
 
 public class KeycloakPolicyEnforcerBuildStep {
 
-	private static final DotName HTTP_SERVER_REQUEST_NAME = DotName.createSimple("io.vertx.core.http.HttpServerRequest");
+    private static final DotName HTTP_SERVER_REQUEST_NAME = DotName.createSimple("io.vertx.core.http.HttpServerRequest");
     private static final DotName READ_STREAM_NAME = DotName.createSimple("io.vertx.core.streams.ReadStream");
-	
+
     @BuildStep
     FeatureBuildItem featureBuildItem() {
         return new FeatureBuildItem(Feature.KEYCLOAK_AUTHORIZATION);
@@ -39,7 +39,7 @@ public class KeycloakPolicyEnforcerBuildStep {
         proxyProducer.produce(new NativeImageProxyDefinitionBuildItem(
                 HTTP_SERVER_REQUEST_NAME.toString(), READ_STREAM_NAME.toString()));
     }
-    
+
     @BuildStep
     RequireBodyHandlerBuildItem requireBody(OidcBuildTimeConfig oidcBuildTimeConfig, KeycloakPolicyEnforcerConfig config) {
         if (oidcBuildTimeConfig.enabled && config.policyEnforcer.enable) {
