@@ -2,14 +2,18 @@ package io.quarkus.keycloak.pep.deployment;
 
 import java.util.Map;
 
+import org.jboss.jandex.DotName;
+
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.deployment.Feature;
+import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ExtensionSslNativeSupportBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.NativeImageProxyDefinitionBuildItem;
 import io.quarkus.keycloak.pep.runtime.KeycloakPolicyEnforcerAuthorizer;
 import io.quarkus.keycloak.pep.runtime.KeycloakPolicyEnforcerConfig;
 import io.quarkus.keycloak.pep.runtime.KeycloakPolicyEnforcerRecorder;
@@ -21,11 +25,21 @@ import io.quarkus.vertx.http.runtime.HttpConfiguration;
 
 public class KeycloakPolicyEnforcerBuildStep {
 
+	private static final DotName HTTP_SERVER_REQUEST_NAME = DotName.createSimple("io.vertx.core.http.HttpServerRequest");
+    private static final DotName READ_STREAM_NAME = DotName.createSimple("io.vertx.core.streams.ReadStream");
+	
     @BuildStep
     FeatureBuildItem featureBuildItem() {
         return new FeatureBuildItem(Feature.KEYCLOAK_AUTHORIZATION);
     }
 
+    @BuildStep
+    void prepareVertxApiProxy(BuildProducer<NativeImageProxyDefinitionBuildItem> proxyProducer) {
+
+        proxyProducer.produce(new NativeImageProxyDefinitionBuildItem(
+                HTTP_SERVER_REQUEST_NAME.toString(), READ_STREAM_NAME.toString()));
+    }
+    
     @BuildStep
     RequireBodyHandlerBuildItem requireBody(OidcBuildTimeConfig oidcBuildTimeConfig, KeycloakPolicyEnforcerConfig config) {
         if (oidcBuildTimeConfig.enabled && config.policyEnforcer.enable) {
