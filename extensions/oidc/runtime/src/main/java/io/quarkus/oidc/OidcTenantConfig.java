@@ -34,7 +34,7 @@ public class OidcTenantConfig extends OidcCommonConfig {
     public ApplicationType applicationType = ApplicationType.SERVICE;
 
     /**
-     * Relative path of the OIDC authorization endpoint which authenticates the users.
+     * Relative or absolute path of the OIDC authorization endpoint which authenticates the users.
      * This property must be set for the 'web-app' applications if OIDC discovery is disabled.
      * This property will be ignored if the discovery is enabled.
      */
@@ -68,7 +68,7 @@ public class OidcTenantConfig extends OidcCommonConfig {
     public Optional<String> jwksPath = Optional.empty();
 
     /**
-     * Relative path of the OIDC end_session_endpoint.
+     * Relative or absolute path of the OIDC end_session_endpoint.
      * This property must be set if OIDC discovery is disabled and RP Initiated Logout support for the 'web-app' applications is
      * required.
      * This property will be ignored if the discovery is enabled.

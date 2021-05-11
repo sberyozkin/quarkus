@@ -21,6 +21,7 @@ import io.quarkus.oidc.OidcTenantConfig.Roles.Source;
 import io.quarkus.oidc.OidcTenantConfig.TokenStateManager.Strategy;
 import io.quarkus.oidc.common.runtime.OidcCommonConfig;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
+import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.runtime.BlockingOperationControl;
 import io.quarkus.runtime.ExecutorRecorder;
 import io.quarkus.runtime.LaunchMode;
@@ -39,6 +40,7 @@ public class OidcRecorder {
     private static final Logger LOG = Logger.getLogger(OidcRecorder.class);
     private static final String DEFAULT_TENANT_ID = "Default";
     private static final Duration CONNECTION_BACKOFF_DURATION = Duration.ofSeconds(2);
+    private static final String HTTP_PREFIX = "http";
 
     private static final Map<String, TenantConfigContext> dynamicTenantsConfig = new ConcurrentHashMap<>();
 
@@ -262,11 +264,15 @@ public class OidcRecorder {
             String tokenUri = OidcCommonUtils.getOidcEndpointUrl(authServerUriString, oidcConfig.tokenPath);
             String introspectionUri = OidcCommonUtils.getOidcEndpointUrl(authServerUriString,
                     oidcConfig.introspectionPath);
-            String authorizationUri = OidcCommonUtils.getOidcEndpointUrl(authServerUriString,
-                    oidcConfig.authorizationPath);
+            String authorizationUri = isAbsoluteUri(oidcConfig.authorizationPath)
+                    ? oidcConfig.authorizationPath.get()
+                    : OidcCommonUtils.getOidcEndpointUrl(authServerUriString,
+                            oidcConfig.authorizationPath);
             String jwksUri = OidcCommonUtils.getOidcEndpointUrl(authServerUriString, oidcConfig.jwksPath);
             String userInfoUri = OidcCommonUtils.getOidcEndpointUrl(authServerUriString, oidcConfig.userInfoPath);
-            String endSessionUri = OidcCommonUtils.getOidcEndpointUrl(authServerUriString, oidcConfig.endSessionPath);
+            String endSessionUri = isAbsoluteUri(oidcConfig.endSessionPath)
+                    ? oidcConfig.endSessionPath.get()
+                    : OidcCommonUtils.getOidcEndpointUrl(authServerUriString, oidcConfig.endSessionPath);
             metadataUni = Uni.createFrom().item(new OidcConfigurationMetadata(tokenUri,
                     introspectionUri, authorizationUri, jwksUri, userInfoUri, endSessionUri,
                     oidcConfig.token.issuer.orElse(null)));
@@ -307,7 +313,7 @@ public class OidcRecorder {
 
     private static Uni<OidcConfigurationMetadata> discoverMetadata(WebClient client, String authServerUrl,
             OidcTenantConfig oidcConfig) {
-        final String discoveryUrl = authServerUrl + "/.well-known/openid-configuration";
+        final String discoveryUrl = authServerUrl + OidcConstants.WELL_KNOWN_CONFIG_PATH;
         return client.getAbs(discoveryUrl).send().onItem().transform(resp -> {
             if (resp.statusCode() == 200) {
                 return new OidcConfigurationMetadata(resp.bodyAsJsonObject());
@@ -317,4 +323,7 @@ public class OidcRecorder {
         });
     }
 
+    private static boolean isAbsoluteUri(Optional<String> path) {
+        return path.isPresent() && path.get().startsWith(HTTP_PREFIX);
+    }
 }

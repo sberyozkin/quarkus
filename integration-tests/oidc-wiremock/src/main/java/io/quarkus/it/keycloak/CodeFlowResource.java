@@ -18,4 +18,10 @@ public class CodeFlowResource {
     public String access() {
         return identity.getPrincipal().getName();
     }
+
+    @GET
+    @Path("/no-discovery")
+    public String accessNoDiscovery() {
+        return "no-discovery:" + identity.getPrincipal().getName();
+    }
 }

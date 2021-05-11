@@ -187,7 +187,7 @@ public class OidcClientRecorder {
     }
 
     private static Uni<String> discoverTokenRequestUri(WebClient client, String authServerUrl, OidcClientConfig oidcConfig) {
-        final String discoveryUrl = authServerUrl + "/.well-known/openid-configuration";
+        final String discoveryUrl = authServerUrl + OidcConstants.WELL_KNOWN_CONFIG_PATH;
         final long connectionRetryCount = OidcCommonUtils.getConnectionRetryCount(oidcConfig);
         final long expireInDelay = OidcCommonUtils.getConnectionDelayInMillis(oidcConfig);
         if (connectionRetryCount > 1) {

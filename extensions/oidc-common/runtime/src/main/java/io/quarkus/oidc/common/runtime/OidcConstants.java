@@ -42,4 +42,6 @@ public final class OidcConstants {
     public static final String EXCHANGE_GRANT = "urn:ietf:params:oauth:grant-type:token-exchange";
 
     public static final String EXPIRES_IN = "expires_in";
+
+    public static final String WELL_KNOWN_CONFIG_PATH = "/.well-known/openid-configuration";
 }

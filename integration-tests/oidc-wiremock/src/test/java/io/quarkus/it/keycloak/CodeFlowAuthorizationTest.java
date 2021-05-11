@@ -32,6 +32,24 @@ public class CodeFlowAuthorizationTest {
             page = form.getInputByValue("login").click();
 
             assertEquals("alice", page.getBody().asText());
+            webClient.getCookieManager().clearCookies();
+        }
+    }
+
+    @Test
+    public void testCodeFlowNoDiscovery() throws IOException {
+        try (final WebClient webClient = createWebClient()) {
+            webClient.getOptions().setRedirectEnabled(true);
+            HtmlPage page = webClient.getPage("http://localhost:8081/code-flow/no-discovery");
+
+            HtmlForm form = page.getFormByName("form");
+            form.getInputByName("username").type("alice");
+            form.getInputByName("password").type("alice");
+
+            page = form.getInputByValue("login").click();
+
+            assertEquals("no-discovery:alice", page.getBody().asText());
+            webClient.getCookieManager().clearCookies();
         }
     }
 

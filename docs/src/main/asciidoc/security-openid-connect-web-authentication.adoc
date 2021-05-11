@@ -572,6 +572,8 @@ quarkus.oidc.introspection-path=/protocol/openid-connect/token/introspect
 quarkus.oidc.end-session-path=/protocol/openid-connect/logout
 ----
 
+In some cases `quarkus.oidc.authorization-path` and `quarkus.oidc.end-session-path` have to be set as absolute URLs, for example, when OpenId Connect Provider is running as a Kubernetes pod with its publicly accessible authorization and logout endpoint URLs being different to the `quarkus.oidc.auth-server-url` based URLs.
+
 [[jwt-claim-verification]]
 == JSON Web Token Claim Verification
 

@@ -407,6 +407,8 @@ For example, here is how you can use `keycloak.js` to authenticate the users and
 </html>
 ----
 
+Note that if the OpenId Connect Provider token endpoint URL is not based on the configured `quarkus.oidc.auth-server-url` value used by the Quarkus endpoint then an issuer verification failure may be reported by the endpoint. In such cases, if you work with Keycloak, please start it with a `KEYCLOAK_FRONTEND_URL` system property set to the base URL used by SPA.
+
 == Provider Endpoint configuration
 
 OIDC `service` application needs to know OpenId Connect provider's token, `JsonWebKey` (JWK) set and possibly `UserInfo` and introspection endpoint addresses.
