@@ -1,0 +1,102 @@
+{#include main}
+{#style}
+.testServiceIcon:hover {
+    color: #3366ac !important;
+    cursor: pointer;
+}
+{/style}
+
+{#script}
+$( document ).ready(function() {
+    var hash = window.location.hash;
+    $('#accessToken').val(hash.match(/access_token=([^&]+)/)[1]);
+    $('#idToken').val(hash.match(/id_token=([^&]+)/)[1]);
+});
+
+function testServiceWithAccessToken(servicePath, token){
+    $.post("testServiceWithToken",
+        {
+          serviceUrl: "http://localhost:8080" + servicePath,
+          token: token
+        },
+        function(data, status){
+          $('#resultAccessToken').val(data);
+        });
+}
+function testServiceWithIdToken(servicePath, token){
+    $.post("testServiceWithToken",
+        {
+          serviceUrl: "http://localhost:8080" + servicePath,
+          token: token
+        },
+        function(data, status){
+          $('#resultIdToken').val(data);
+        });
+}
+
+function logout() {
+    window.location.assign('{info:keycloakUrl}' + "/realms/" + '{info:keycloakRealm}' + "/protocol/openid-connect/logout"
+      + "?post_logout_redirect_uri=" + "http%3A%2F%2Flocalhost%3A8080%2Fq%2Fdev%2Fio.quarkus.quarkus-oidc%2Fprovider");
+}
+
+{/script}
+{#title}Sign In and Test Service{/title}
+{#body}
+<table class="table table-striped">
+    <tbody>
+    <tr>
+          <td>
+              Access Token: <input id="accessToken" type="text" value="" title="Access Token"/>
+          </td>
+    </tr>
+    <tr>
+          <td>
+              ID Token: <input id="idToken" type="text" value="" title="ID Token"/>
+          </td>
+    </tr>      
+    </tbody>
+</table>
+<table class="table table-striped">
+    <tbody>
+      <tr>
+          <td>
+              Service Path: <input id="servicePath" type="text" value="/" title="Service Path"/>
+          </td>
+      </tr> 
+      <tr>   
+          <table class="table table-striped">
+            <tr>
+	          <td>
+	             <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="testServiceWithAccessToken($('#servicePath').val(), $('#accessToken').val());" title="Test With Access Token"></i> Test With Access Token
+	          </td>
+	          <td>
+	              Result: <input id="resultAccessToken" type="text" value="" title="Result"/>
+	          </td>
+	        </tr>
+	       </table>
+	  </tr>
+	  <tr>    
+	      <table class="table table-striped">
+            <tr>
+	          <td>
+	             <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="testServiceWithIdToken($('#servicePath').val(), $('#idToken').val());" title="Test With Access Token"></i> Test With ID Token
+	          </td>
+	          <td>
+	              Result: <input id="resultIdToken" type="text" value="" title="Result"/>
+	          </td>
+	        </tr>
+	       </table>
+	  </tr>          
+    </tbody>
+</table>
+<table class="table table-striped">
+    <tbody>
+    <tr>
+          <td>
+              <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="logout();" title="Logout and Start Again"></i> Logout and Start Again
+          </td>
+    </tr>      
+    </tbody>
+</table>
+{/body}
+{/include}

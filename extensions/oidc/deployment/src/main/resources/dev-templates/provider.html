@@ -1,0 +1,117 @@
+{#include main}
+{#style}
+.testServiceIcon:hover {
+    color: #3366ac !important;
+    cursor: pointer;
+}
+{/style}
+
+{#script}
+function testService(userName, servicePath){
+    $.post("testService",
+        {
+          keycloakUrl: '{info:keycloakUrl}',
+          serviceUrl: "http://localhost:8080" + servicePath,
+          realm: '{info:keycloakRealm}',
+          client: '{info:keycloakClient}',
+          clientSecret: '{info:keycloakClientSecret}',
+          user: userName,
+          grant: '{info:oidcGrantType}'
+        },
+        function(data, status){
+          $('#result').val(data);
+        });
+}
+function testServiceClientCredentials(servicePath) {
+    $.post("testService",
+        {
+          keycloakUrl: '{info:keycloakUrl}',
+          serviceUrl: "http://localhost:8080" + servicePath,
+          realm: '{info:keycloakRealm}',
+          client: '{info:keycloakClient}',
+          clientSecret: '{info:keycloakClientSecret}',
+          grant: '{info:oidcGrantType}'
+        },
+        function(data, status){
+          $('#result').val(data);
+        });
+}
+
+function signInToService(servicePath) {
+    window.open("http://localhost:8080" + servicePath);
+}
+
+function signInToKeycloakAndGetTokens() {
+    window.open('{info:keycloakUrl}' + "/realms/" + '{info:keycloakRealm}' + "/protocol/openid-connect/auth"
+      + "?client_id=" + '{info:keycloakClient}'
+      + "&redirect_uri=" + "http%3A%2F%2Flocalhost%3A8080%2Fq%2Fdev%2Fio.quarkus.quarkus-oidc%2Fspa"
+      + "&scope=openid&response_type=token id_token&response_mode=fragment&prompt=login"
+      + "&nonce=" + makeid());
+}
+
+function signInToKeycloakAndConfigureRealms() {
+    window.open('{info:keycloakUrl}');
+}
+
+function makeid() {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < 7; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
+{/script}
+{#title}Keycloak{/title}
+{#body}
+<p/>
+<table class="table table-striped">
+    <tbody>
+    <tr>
+        <td>
+           <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="signInToKeycloakAndConfigureRealms();" title="Sign In to Configure Realms"></i> Sign In to Keycloak to Configure Realms
+        </td>   
+    </tr>
+    <tr>
+        {#if info:oidcApplicationType is 'service'}
+          {#if info:oidcGrantType is 'implicit'}  
+            <td>
+              <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="signInToKeycloakAndGetTokens();" title="Sign In to Get Access and ID Tokens"></i> Sign In to Keycloak to Get Access and ID Tokens
+            </td>   
+          {#else}
+            {#if info:oidcGrantType is 'password'}
+              <td>
+                  User: <input id="userName" type="select" value="{info:keycloakUsers.keySet().iterator().next()}" title="User"/>
+              </td>
+            {/if}
+            <td>
+                Service Path: <input id="servicePath" type="text" value="/" title="Service Path"/>
+            </td>
+            {#if info:oidcGrantType is 'password'}
+              <td>
+                  <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="testService($('#userName').val(), $('#servicePath').val());" title="Test Service"></i> Test Service
+              </td>
+            {#else}
+              <td>
+                  <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="testServiceClientCredentials($('#servicePath').val());" title="Test Service"></i> Test Service
+              </td>
+            {/if}
+            <td>
+                Result: <input id="result" type="text" value="" title="Result"/>
+            </td>
+          {/if}    
+        {#else}
+           <td>
+              Service Path: <input id="servicePath" type="text" value="/" title="Service Path"/>
+           </td>
+           <td>
+              <i class="fas fa-sync-alt text-success testServiceIcon align-middle" onclick="signInToService($('#servicePath').val());" title="Sign in to Service"></i> Sign in to Service
+           </td>
+        {/if}
+    </tr>
+    </tbody>
+</table>
+{/body}
+{/include}
