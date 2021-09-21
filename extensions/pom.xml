@@ -134,6 +134,7 @@
         <module>oidc-client-reactive-filter</module>
         <module>keycloak-authorization</module>
         <module>keycloak-admin-client</module>
+        <module>kerberos</module>
 
         <!-- Infinispan -->
         <module>infinispan-client</module>

@@ -57,6 +57,7 @@ public enum Feature {
     JSCH,
     KAFKA_CLIENT,
     KAFKA_STREAMS,
+    KERBEROS,
     KEYCLOAK_AUTHORIZATION,
     KOTLIN,
     KUBERNETES,
