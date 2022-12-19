@@ -32,8 +32,66 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
     }
 
     /**
+     * Get an access token from the default tenant realm using a client_credentials grant.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
+     * Client id is set to `quarkus-app` unless it has been configured with the `quarkus.oidc.client-id` property.
+     * Client secret is set to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
+     */
+    public String getClientAccessToken() {
+        return getClientAccessToken(getClientId());
+    }
+
+    /**
+     * Get an access token from the default tenant realm using a client_credentials grant with a
+     * the provided client id.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
+     */
+    public String getClientAccessToken(String clientId) {
+        return getClientAccessToken(clientId, getClientSecret());
+    }
+
+    /**
+     * Get an access token from the default tenant realm using a client_credentials grant with a
+     * the provided client id and secret.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
+     */
+    public String getClientAccessToken(String clientId, String clientSecret) {
+        return getClientAccessTokenInternal(clientId, clientSecret, getAuthServerUrl());
+    }
+
+    /**
+     * Get an access token from the provided realm using a client_credentials grant.
+     * Client id is set to `quarkus-app` unless it has been configured with the `quarkus.oidc.client-id` property.
+     * Client secret is set to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
+     */
+    public String getRealmClientAccessToken(String realm) {
+        return getRealmClientAccessToken(realm, getClientId());
+    }
+
+    /**
+     * Get an access token from the provided realm using a client_credentials grant with a
+     * the provided client id.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
+     */
+    public String getRealmClientAccessToken(String realm, String clientId) {
+        return getRealmClientAccessToken(realm, clientId, getClientSecret());
+    }
+
+    /**
+     * Get an access token from the provided realm using a client_credentials grant with a
+     * the provided client id and secret.
+     */
+    public String getRealmClientAccessToken(String realm, String clientId, String clientSecret) {
+        return getClientAccessTokenInternal(clientId, clientSecret, getAuthServerBaseUrl() + "/realms/" + realm);
+    }
+
+    /**
      * Get an access token from the default tenant realm using a password grant with a provided user name.
-     * User secret will be the same as the user name, client id will be set to 'quarkus-app' and client secret to 'secret'.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
+     * User secret will be the same as the user name.
+     * Client id will be set to `quarkus-app` unless it has been configured with the `quarkus.oidc.client-id` property.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
      */
     public String getAccessToken(String userName) {
         return getAccessToken(userName, getClientId());
@@ -41,7 +99,9 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
 
     /**
      * Get an access token from the default tenant realm using a password grant with the provided user name and client id.
-     * User secret will be the same as the user name, client secret will be set to 'secret'.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
+     * User secret will be the same as the user name.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
      */
     public String getAccessToken(String userName, String clientId) {
         return getAccessToken(userName, userName, clientId);
@@ -50,7 +110,8 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
     /**
      * Get an access token from the default tenant realm using a password grant with the provided user name, user secret and
      * client id.
-     * Client secret will be set to 'secret'.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
+     * Client secret will be set to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` propertys.
      */
     public String getAccessToken(String userName, String userSecret, String clientId) {
         return getAccessToken(userName, userSecret, clientId, getClientSecret());
@@ -59,6 +120,7 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
     /**
      * Get an access token from the default tenant realm using a password grant with the provided user name, user secret, client
      * id and secret.
+     * Realm name is set to `quarkus` unless it has been configured with the `quarkus.keycloak.devservices.realm-name` property.
      * Set the client secret to an empty string or null if it is not required.
      */
     public String getAccessToken(String userName, String userSecret, String clientId, String clientSecret) {
@@ -67,7 +129,9 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
 
     /**
      * Get a realm access token using a password grant with a provided user name.
-     * User secret will be the same as the user name, client id will be set to 'quarkus-app' and client secret to 'secret'.
+     * User secret will be the same as the user name.
+     * Client id will be set to `quarkus-app` unless it has been configured with the `quarkus.oidc.client-id` property.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
      */
     public String getRealmAccessToken(String realm, String userName) {
         return getRealmAccessToken(realm, userName, getClientId());
@@ -75,7 +139,8 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
 
     /**
      * Get a realm access token using a password grant with the provided user name and client id.
-     * User secret will be the same as the user name, client secret will be set to 'secret'.
+     * User secret will be the same as the user name.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
      */
     public String getRealmAccessToken(String realm, String userName, String clientId) {
         return getRealmAccessToken(realm, userName, userName, clientId);
@@ -83,7 +148,7 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
 
     /**
      * Get a realm access token using a password grant with the provided user name, user secret and client id.
-     * Client secret will be set to 'secret'.
+     * Client secret will be to `secret` unless it has been configured with the `quarkus.oidc.credentials.secret` property.
      */
     public String getRealmAccessToken(String realm, String userName, String userSecret, String clientId) {
         return getRealmAccessToken(realm, userName, userSecret, clientId, getClientSecret());
@@ -103,6 +168,17 @@ public class KeycloakTestClient implements DevServicesContext.ContextAware {
         RequestSpecification requestSpec = RestAssured.given().param("grant_type", "password")
                 .param("username", userName)
                 .param("password", userSecret)
+                .param("client_id", clientId);
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            requestSpec = requestSpec.param("client_secret", clientSecret);
+        }
+        return requestSpec.when().post(authServerUrl + "/protocol/openid-connect/token")
+                .as(AccessTokenResponse.class).getToken();
+    }
+
+    private String getClientAccessTokenInternal(String clientId, String clientSecret,
+            String authServerUrl) {
+        RequestSpecification requestSpec = RestAssured.given().param("grant_type", "client_credentials")
                 .param("client_id", clientId);
         if (clientSecret != null && !clientSecret.isBlank()) {
             requestSpec = requestSpec.param("client_secret", clientSecret);
