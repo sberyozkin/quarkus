@@ -73,7 +73,7 @@ public class HttpAuthenticator {
         }
     }
 
-    IdentityProviderManager getIdentityProviderManager() {
+    public IdentityProviderManager getIdentityProviderManager() {
         return identityProviderManager;
     }
 

@@ -209,12 +209,13 @@ public class HttpSecurityRecorder {
         };
     }
 
-    public BeanContainerListener initPermissions(HttpBuildTimeConfig permissions,
+    public BeanContainerListener initPermissions(HttpBuildTimeConfig buildTimeConfig,
             Map<String, Supplier<HttpSecurityPolicy>> policies) {
         return new BeanContainerListener() {
             @Override
             public void created(BeanContainer container) {
-                container.beanInstance(PathMatchingHttpSecurityPolicy.class).init(permissions, policies);
+                container.beanInstance(PathMatchingHttpSecurityPolicy.class)
+                        .init(buildTimeConfig.auth.permissions, policies, buildTimeConfig.rootPath);
             }
         };
     }

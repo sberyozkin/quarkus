@@ -15,7 +15,10 @@ public class ManagementInterfaceTestCase {
 
     @Test
     void verifyThatHealthChecksAreExposedOnManagementInterface() {
-        RestAssured.get(getPrefix() + "/q/health")
+        RestAssured.given().auth().preemptive().basic("bob", "bob").get(getPrefix() + "/q/health")
+                .then().statusCode(401);
+
+        RestAssured.given().auth().basic("alice", "alice").get(getPrefix() + "/q/health")
                 .then().statusCode(200)
                 .body(Matchers.containsString("UP"));
 
@@ -25,7 +28,7 @@ public class ManagementInterfaceTestCase {
 
     @Test
     void verifyThatMetricsAreExposedOnManagementInterface() {
-        RestAssured.get(getPrefix() + "/q/metrics")
+        RestAssured.given().auth().basic("alice", "alice").get(getPrefix() + "/q/metrics")
                 .then().statusCode(200)
                 .body(Matchers.containsString("http_server_bytes_read"));
 

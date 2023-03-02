@@ -13,7 +13,6 @@ import java.util.function.Supplier;
 import jakarta.inject.Singleton;
 
 import io.quarkus.security.identity.SecurityIdentity;
-import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.PolicyMappingConfig;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpServerRequest;
@@ -83,14 +82,15 @@ public class PathMatchingHttpSecurityPolicy implements HttpSecurityPolicy {
                 });
     }
 
-    void init(HttpBuildTimeConfig config, Map<String, Supplier<HttpSecurityPolicy>> supplierMap) {
+    public void init(Map<String, PolicyMappingConfig> permissions,
+            Map<String, Supplier<HttpSecurityPolicy>> supplierMap, String rootPath) {
         Map<String, HttpSecurityPolicy> permissionCheckers = new HashMap<>();
         for (Map.Entry<String, Supplier<HttpSecurityPolicy>> i : supplierMap.entrySet()) {
             permissionCheckers.put(i.getKey(), i.getValue().get());
         }
 
         Map<String, List<HttpMatcher>> tempMap = new HashMap<>();
-        for (Map.Entry<String, PolicyMappingConfig> entry : config.auth.permissions.entrySet()) {
+        for (Map.Entry<String, PolicyMappingConfig> entry : permissions.entrySet()) {
             HttpSecurityPolicy checker = permissionCheckers.get(entry.getValue().policy);
             if (checker == null) {
                 throw new RuntimeException("Unable to find HTTP security policy " + entry.getValue().policy);
@@ -100,7 +100,7 @@ public class PathMatchingHttpSecurityPolicy implements HttpSecurityPolicy {
                 for (String path : entry.getValue().paths.orElse(Collections.emptyList())) {
                     path = path.trim();
                     if (!path.startsWith("/")) {
-                        path = config.rootPath + path;
+                        path = rootPath + path;
                     }
                     if (tempMap.containsKey(path)) {
                         HttpMatcher m = new HttpMatcher(entry.getValue().authMechanism.orElse(null),
