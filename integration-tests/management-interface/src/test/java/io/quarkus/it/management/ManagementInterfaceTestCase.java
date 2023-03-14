@@ -15,8 +15,11 @@ public class ManagementInterfaceTestCase {
 
     @Test
     void verifyThatHealthChecksAreExposedOnManagementInterface() {
-        RestAssured.given().auth().preemptive().basic("bob", "bob").get(getPrefix() + "/q/health")
+        RestAssured.given().auth().preemptive().basic("john", "john").get(getPrefix() + "/q/health")
                 .then().statusCode(401);
+
+        RestAssured.given().auth().preemptive().basic("bob", "bob").get(getPrefix() + "/q/health")
+                .then().statusCode(403);
 
         RestAssured.given().auth().basic("alice", "alice").get(getPrefix() + "/q/health")
                 .then().statusCode(200)
@@ -40,4 +43,19 @@ public class ManagementInterfaceTestCase {
                 .then().statusCode(404);
     }
 
+    @Test
+    void verifyMainEndpoint() {
+        RestAssured.get("/service/hello").then().statusCode(200)
+                .body(Matchers.equalTo("hello"));
+
+        RestAssured.given().auth().preemptive().basic("john", "john").get("/service/goodbye")
+                .then().statusCode(401);
+
+        RestAssured.given().auth().preemptive().basic("alice", "alice").get("/service/goodbye")
+                .then().statusCode(403);
+
+        RestAssured.given().auth().basic("bob", "bob").get("/service/goodbye")
+                .then().statusCode(200)
+                .body(Matchers.equalTo("goodbye"));
+    }
 }

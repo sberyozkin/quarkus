@@ -1,7 +1,6 @@
 package io.quarkus.vertx.http.deployment;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -17,13 +16,15 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
+import io.quarkus.vertx.http.runtime.PolicyConfig;
 import io.quarkus.vertx.http.runtime.management.ManagementInterfaceBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.management.ManagementInterfaceSecurityRecorder;
 import io.quarkus.vertx.http.runtime.security.BasicAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
-import io.quarkus.vertx.http.runtime.security.HttpAuthorizer;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
+import io.quarkus.vertx.http.runtime.security.RolesAllowedHttpSecurityPolicy;
+import io.quarkus.vertx.http.runtime.security.SupplierImpl;
 
 public class ManagementInterfaceSecurityProcessor {
 
@@ -37,7 +38,6 @@ public class ManagementInterfaceSecurityProcessor {
             return null;
         }
 
-        //basic auth explicitly disabled
         if (managementInterfaceBuildTimeConfig.auth.basic.orElse(false)) {
             SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                     .configure(BasicAuthenticationMechanism.class)
@@ -59,20 +59,19 @@ public class ManagementInterfaceSecurityProcessor {
             BuildProducer<AdditionalBeanBuildItem> beanProducer,
             Capabilities capabilities,
             BuildProducer<BeanContainerListenerBuildItem> beanContainerListenerBuildItemBuildProducer,
-            ManagementInterfaceBuildTimeConfig buildTimeConfig,
-            List<HttpSecurityPolicyBuildItem> httpSecurityPolicyBuildItemList) {
+            ManagementInterfaceBuildTimeConfig buildTimeConfig) {
+
         Map<String, Supplier<HttpSecurityPolicy>> policyMap = new HashMap<>();
-        for (HttpSecurityPolicyBuildItem e : httpSecurityPolicyBuildItemList) {
-            if (policyMap.containsKey(e.getName())) {
-                throw new RuntimeException("Multiple HTTP security policies defined with name " + e.getName());
-            }
-            policyMap.put(e.getName(), e.policySupplier);
+        for (Map.Entry<String, PolicyConfig> e : buildTimeConfig.auth.rolePolicy.entrySet()) {
+            policyMap.put(e.getKey(),
+                    new SupplierImpl<>(new RolesAllowedHttpSecurityPolicy(e.getValue().rolesAllowed)));
         }
 
-        if (capabilities.isPresent(Capability.SECURITY)) {
+        if (buildTimeConfig.auth.basic.orElse(false)
+                && capabilities.isPresent(Capability.SECURITY)) {
             beanProducer
-                    .produce(AdditionalBeanBuildItem.builder().setUnremovable().addBeanClass(HttpAuthenticator.class)
-                            .addBeanClass(HttpAuthorizer.class).build());
+                    .produce(AdditionalBeanBuildItem.builder().setUnremovable()
+                            .addBeanClass(HttpAuthenticator.class).build());
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(
                             recorder.authenticationMechanismHandler(),
