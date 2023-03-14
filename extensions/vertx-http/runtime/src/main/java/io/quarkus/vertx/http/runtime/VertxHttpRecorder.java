@@ -357,7 +357,7 @@ public class VertxHttpRecorder {
     }
 
     public void finalizeRouter(BeanContainer container, Consumer<Route> defaultRouteHandler,
-            List<Filter> filterList, Supplier<Vertx> vertx,
+            List<Filter> filterList, List<Filter> managementInterfaceFilterList, Supplier<Vertx> vertx,
             LiveReloadConfig liveReloadConfig, Optional<RuntimeValue<Router>> mainRouterRuntimeValue,
             RuntimeValue<Router> httpRouterRuntimeValue, RuntimeValue<io.vertx.mutiny.ext.web.Router> mutinyRouter,
             RuntimeValue<Router> frameworkRouter, RuntimeValue<Router> managementRouter,
@@ -530,6 +530,11 @@ public class VertxHttpRecorder {
         if (managementRouter != null && managementRouter.getValue() != null) {
             // Add body handler and cors handler
             var mr = managementRouter.getValue();
+
+            for (Filter filter : managementInterfaceFilterList) {
+                mr.route().order(filter.getPriority()).handler(filter.getHandler());
+            }
+
             mr.route().order(Integer.MIN_VALUE).handler(createBodyHandlerForManagementInterface());
             // We can use "*" here as the management interface is not expected to be used publicly.
             mr.route().order(Integer.MIN_VALUE).handler(CorsHandler.create().addOrigin("*"));

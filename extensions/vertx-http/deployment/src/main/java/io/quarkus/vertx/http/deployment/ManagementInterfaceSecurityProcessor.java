@@ -67,7 +67,7 @@ public class ManagementInterfaceSecurityProcessor {
     @Record(ExecutionTime.STATIC_INIT)
     void setupAuthenticationMechanisms(
             ManagementInterfaceSecurityRecorder recorder,
-            BuildProducer<FilterBuildItem> filterBuildItemBuildProducer,
+            BuildProducer<ManagementInterfaceFilterBuildItem> filterBuildItemBuildProducer,
             BuildProducer<AdditionalBeanBuildItem> beanProducer,
             Capabilities capabilities,
             BuildProducer<BeanContainerListenerBuildItem> beanContainerListenerBuildItemBuildProducer,
@@ -86,11 +86,12 @@ public class ManagementInterfaceSecurityProcessor {
                     .produce(AdditionalBeanBuildItem.builder().setUnremovable().addBeanClass(HttpAuthenticator.class)
                             .addBeanClass(HttpAuthorizer.class).build());
             filterBuildItemBuildProducer
-                    .produce(new FilterBuildItem(
+                    .produce(new ManagementInterfaceFilterBuildItem(
                             recorder.authenticationMechanismHandler(),
                             FilterBuildItem.AUTHENTICATION));
             filterBuildItemBuildProducer
-                    .produce(new FilterBuildItem(recorder.permissionCheckHandler(), FilterBuildItem.AUTHORIZATION));
+                    .produce(new ManagementInterfaceFilterBuildItem(recorder.permissionCheckHandler(),
+                            FilterBuildItem.AUTHORIZATION));
 
             if (!buildTimeConfig.auth.permissions.isEmpty()) {
                 beanContainerListenerBuildItemBuildProducer
