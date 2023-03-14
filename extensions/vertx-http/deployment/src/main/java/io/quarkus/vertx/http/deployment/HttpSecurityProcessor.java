@@ -40,13 +40,12 @@ public class HttpSecurityProcessor {
     @BuildStep
     public void builtins(BuildProducer<HttpSecurityPolicyBuildItem> producer,
             HttpBuildTimeConfig buildTimeConfig,
-            ManagementInterfaceBuildTimeConfig managementInterfacebuildTimeConfig,
             BuildProducer<AdditionalBeanBuildItem> beanProducer) {
         producer.produce(new HttpSecurityPolicyBuildItem("deny", new SupplierImpl<>(new DenySecurityPolicy())));
         producer.produce(new HttpSecurityPolicyBuildItem("permit", new SupplierImpl<>(new PermitSecurityPolicy())));
         producer.produce(
                 new HttpSecurityPolicyBuildItem("authenticated", new SupplierImpl<>(new AuthenticatedHttpSecurityPolicy())));
-        if (!buildTimeConfig.auth.permissions.isEmpty() || !managementInterfacebuildTimeConfig.auth.permissions.isEmpty()) {
+        if (!buildTimeConfig.auth.permissions.isEmpty()) {
             beanProducer.produce(AdditionalBeanBuildItem.unremovableOf(PathMatchingHttpSecurityPolicy.class));
         }
         for (Map.Entry<String, PolicyConfig> e : buildTimeConfig.auth.rolePolicy.entrySet()) {

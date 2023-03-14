@@ -19,10 +19,13 @@ import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.PolicyConfig;
 import io.quarkus.vertx.http.runtime.management.ManagementInterfaceBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.management.ManagementInterfaceSecurityRecorder;
+import io.quarkus.vertx.http.runtime.security.AuthenticatedHttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.BasicAuthenticationMechanism;
+import io.quarkus.vertx.http.runtime.security.DenySecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
+import io.quarkus.vertx.http.runtime.security.PermitSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.RolesAllowedHttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.SupplierImpl;
 
@@ -66,6 +69,9 @@ public class ManagementInterfaceSecurityProcessor {
             policyMap.put(e.getKey(),
                     new SupplierImpl<>(new RolesAllowedHttpSecurityPolicy(e.getValue().rolesAllowed)));
         }
+        policyMap.put("deny", new SupplierImpl<>(new DenySecurityPolicy()));
+        policyMap.put("permit", new SupplierImpl<>(new PermitSecurityPolicy()));
+        policyMap.put("authenticated", new SupplierImpl<>(new AuthenticatedHttpSecurityPolicy()));
 
         if (buildTimeConfig.auth.basic.orElse(false)
                 && capabilities.isPresent(Capability.SECURITY)) {

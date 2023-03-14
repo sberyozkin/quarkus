@@ -38,6 +38,11 @@ public class ManagementInterfaceTestCase {
         RestAssured.given().auth().basic("alice", "alice").get(getPrefix() + "/q/metrics")
                 .then().statusCode(200)
                 .body(Matchers.containsString("http_server_bytes_read"));
+        RestAssured.given().auth().basic("bob", "bob").get(getPrefix() + "/q/metrics")
+                .then().statusCode(200)
+                .body(Matchers.containsString("http_server_bytes_read"));
+        RestAssured.given().auth().basic("john", "john").get(getPrefix() + "/q/metrics")
+                .then().statusCode(401);
 
         RestAssured.get("/q/metrics")
                 .then().statusCode(404);
