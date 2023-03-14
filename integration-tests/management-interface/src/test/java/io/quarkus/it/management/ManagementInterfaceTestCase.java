@@ -22,6 +22,10 @@ public class ManagementInterfaceTestCase {
                 .then().statusCode(200)
                 .body(Matchers.containsString("UP"));
 
+        RestAssured.given().auth().basic("alice", "alice").get(getPrefix() + "/q/health/ready")
+                .then().statusCode(200)
+                .body(Matchers.containsString("UP"));
+
         RestAssured.get("/q/health")
                 .then().statusCode(404);
     }

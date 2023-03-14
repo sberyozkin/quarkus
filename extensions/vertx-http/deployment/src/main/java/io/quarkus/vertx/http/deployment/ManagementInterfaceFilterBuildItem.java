@@ -12,8 +12,8 @@ import io.vertx.ext.web.RoutingContext;
 public final class ManagementInterfaceFilterBuildItem extends MultiBuildItem {
 
     //predefined system priorities
-    public static final int AUTHENTICATION = 200;
-    public static final int AUTHORIZATION = 100;
+    public static final int AUTHENTICATION = -200;
+    public static final int AUTHORIZATION = -100;
 
     private final Handler<RoutingContext> handler;
     private final int priority;
@@ -27,14 +27,7 @@ public final class ManagementInterfaceFilterBuildItem extends MultiBuildItem {
      */
     public ManagementInterfaceFilterBuildItem(Handler<RoutingContext> handler, int priority) {
         this.handler = handler;
-        checkPriority(priority);
         this.priority = priority;
-    }
-
-    private void checkPriority(int priority) {
-        if (priority < 0) {
-            throw new IllegalArgumentException("`priority` must be positive");
-        }
     }
 
     public Handler<RoutingContext> getHandler() {

@@ -17,7 +17,6 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
-import io.quarkus.vertx.http.runtime.PolicyConfig;
 import io.quarkus.vertx.http.runtime.management.ManagementInterfaceBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.management.ManagementInterfaceSecurityRecorder;
 import io.quarkus.vertx.http.runtime.security.BasicAuthenticationMechanism;
@@ -25,20 +24,8 @@ import io.quarkus.vertx.http.runtime.security.HttpAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
 import io.quarkus.vertx.http.runtime.security.HttpAuthorizer;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.RolesAllowedHttpSecurityPolicy;
-import io.quarkus.vertx.http.runtime.security.SupplierImpl;
 
 public class ManagementInterfaceSecurityProcessor {
-
-    @BuildStep
-    public void builtins(BuildProducer<HttpSecurityPolicyBuildItem> producer,
-            ManagementInterfaceBuildTimeConfig buildTimeConfig) {
-        for (Map.Entry<String, PolicyConfig> e : buildTimeConfig.auth.rolePolicy.entrySet()) {
-            producer.produce(new HttpSecurityPolicyBuildItem(e.getKey(),
-                    new SupplierImpl<>(new RolesAllowedHttpSecurityPolicy(e.getValue().rolesAllowed))));
-        }
-
-    }
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
@@ -54,6 +41,7 @@ public class ManagementInterfaceSecurityProcessor {
         if (managementInterfaceBuildTimeConfig.auth.basic.isPresent() && !managementInterfaceBuildTimeConfig.auth.basic.get()) {
             return null;
         }
+        // TODO Avoid double registration
         SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
                 .configure(BasicAuthenticationMechanism.class)
                 .types(HttpAuthenticationMechanism.class)
@@ -88,10 +76,10 @@ public class ManagementInterfaceSecurityProcessor {
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(
                             recorder.authenticationMechanismHandler(),
-                            FilterBuildItem.AUTHENTICATION));
+                            ManagementInterfaceFilterBuildItem.AUTHENTICATION));
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(recorder.permissionCheckHandler(),
-                            FilterBuildItem.AUTHORIZATION));
+                            ManagementInterfaceFilterBuildItem.AUTHORIZATION));
 
             if (!buildTimeConfig.auth.permissions.isEmpty()) {
                 beanContainerListenerBuildItemBuildProducer

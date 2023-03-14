@@ -531,15 +531,18 @@ public class VertxHttpRecorder {
             // Add body handler and cors handler
             var mr = managementRouter.getValue();
 
-            for (Filter filter : managementInterfaceFilterList) {
-                mr.route().order(filter.getPriority()).handler(filter.getHandler());
-            }
+            mr.route().last().failureHandler(
+                    new QuarkusErrorHandler(launchMode.isDevOrTest(), httpConfiguration.unhandledErrorContentTypeDefault));
 
             mr.route().order(Integer.MIN_VALUE).handler(createBodyHandlerForManagementInterface());
             // We can use "*" here as the management interface is not expected to be used publicly.
             mr.route().order(Integer.MIN_VALUE).handler(CorsHandler.create().addOrigin("*"));
 
             HttpServerCommonHandlers.applyFilters(managementConfiguration.getValue().filter, mr);
+            for (Filter filter : managementInterfaceFilterList) {
+                mr.route().order(filter.getPriority()).handler(filter.getHandler());
+            }
+
             HttpServerCommonHandlers.applyHeaders(managementConfiguration.getValue().header, mr);
             HttpServerCommonHandlers.enforceMaxBodySize(managementConfiguration.getValue().limits, mr);
             applyCompression(managementBuildTimeConfig.enableCompression, mr);
