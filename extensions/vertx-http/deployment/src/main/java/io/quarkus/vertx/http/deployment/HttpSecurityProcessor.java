@@ -96,8 +96,9 @@ public class HttpSecurityProcessor {
     SyntheticBeanBuildItem initBasicAuth(
             HttpSecurityRecorder recorder,
             HttpBuildTimeConfig buildTimeConfig,
+            ManagementInterfaceBuildTimeConfig managementInterfaceBuildTimeConfig,
             BuildProducer<SecurityInformationBuildItem> securityInformationProducer) {
-        if (!applicationBasicAuthRequired(buildTimeConfig)) {
+        if (!applicationBasicAuthRequired(buildTimeConfig, managementInterfaceBuildTimeConfig)) {
             return null;
         }
 
@@ -117,15 +118,18 @@ public class HttpSecurityProcessor {
         return configurator.done();
     }
 
-    public static boolean applicationBasicAuthRequired(HttpBuildTimeConfig buildTimeConfig) {
+    public static boolean applicationBasicAuthRequired(HttpBuildTimeConfig buildTimeConfig,
+            ManagementInterfaceBuildTimeConfig managementInterfaceBuildTimeConfig) {
         //basic auth explicitly disabled
         if (buildTimeConfig.auth.basic.isPresent() && !buildTimeConfig.auth.basic.get()) {
             return false;
         }
-        if ((buildTimeConfig.auth.form.enabled || isMtlsClientAuthenticationEnabled(buildTimeConfig))
-                && !buildTimeConfig.auth.basic.orElse(false)) {
-            //if form auth is enabled and we are not then we don't install
-            return false;
+        if (!buildTimeConfig.auth.basic.orElse(false)) {
+            if ((buildTimeConfig.auth.form.enabled || isMtlsClientAuthenticationEnabled(buildTimeConfig))
+                    || managementInterfaceBuildTimeConfig.auth.basic.orElse(false)) {
+                //if form auth is enabled and we are not then we don't install
+                return false;
+            }
         }
 
         return true;

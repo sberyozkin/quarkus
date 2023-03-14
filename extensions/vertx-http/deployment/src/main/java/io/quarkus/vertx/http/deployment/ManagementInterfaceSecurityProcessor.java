@@ -33,22 +33,22 @@ public class ManagementInterfaceSecurityProcessor {
             HttpBuildTimeConfig httpBuildTimeConfig,
             ManagementInterfaceSecurityRecorder recorder,
             ManagementInterfaceBuildTimeConfig managementInterfaceBuildTimeConfig) {
-        if (HttpSecurityProcessor.applicationBasicAuthRequired(httpBuildTimeConfig)) {
+        if (HttpSecurityProcessor.applicationBasicAuthRequired(httpBuildTimeConfig, managementInterfaceBuildTimeConfig)) {
             return null;
         }
 
         //basic auth explicitly disabled
-        if (managementInterfaceBuildTimeConfig.auth.basic.isPresent() && !managementInterfaceBuildTimeConfig.auth.basic.get()) {
-            return null;
+        if (managementInterfaceBuildTimeConfig.auth.basic.orElse(false)) {
+            SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
+                    .configure(BasicAuthenticationMechanism.class)
+                    .types(HttpAuthenticationMechanism.class)
+                    .setRuntimeInit()
+                    .scope(Singleton.class)
+                    .supplier(recorder.setupBasicAuth());
+            return configurator.done();
         }
-        // TODO Avoid double registration
-        SyntheticBeanBuildItem.ExtendedBeanConfigurator configurator = SyntheticBeanBuildItem
-                .configure(BasicAuthenticationMechanism.class)
-                .types(HttpAuthenticationMechanism.class)
-                .setRuntimeInit()
-                .scope(Singleton.class)
-                .supplier(recorder.setupBasicAuth());
-        return configurator.done();
+
+        return null;
     }
 
     @BuildStep
@@ -78,13 +78,8 @@ public class ManagementInterfaceSecurityProcessor {
                             recorder.authenticationMechanismHandler(),
                             ManagementInterfaceFilterBuildItem.AUTHENTICATION));
             filterBuildItemBuildProducer
-                    .produce(new ManagementInterfaceFilterBuildItem(recorder.permissionCheckHandler(),
+                    .produce(new ManagementInterfaceFilterBuildItem(recorder.permissionCheckHandler(buildTimeConfig, policyMap),
                             ManagementInterfaceFilterBuildItem.AUTHORIZATION));
-
-            if (!buildTimeConfig.auth.permissions.isEmpty()) {
-                beanContainerListenerBuildItemBuildProducer
-                        .produce(new BeanContainerListenerBuildItem(recorder.initPermissions(buildTimeConfig, policyMap)));
-            }
         } else {
             if (!buildTimeConfig.auth.permissions.isEmpty()) {
                 throw new IllegalStateException("HTTP permissions have been set however security is not enabled");

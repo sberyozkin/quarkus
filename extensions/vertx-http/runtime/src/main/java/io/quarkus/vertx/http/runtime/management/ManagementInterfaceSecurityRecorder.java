@@ -6,17 +6,17 @@ import java.util.function.Supplier;
 
 import jakarta.enterprise.inject.spi.CDI;
 
-import io.quarkus.arc.runtime.BeanContainer;
-import io.quarkus.arc.runtime.BeanContainerListener;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
+import io.quarkus.security.identity.IdentityProviderManager;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.request.AnonymousAuthenticationRequest;
+import io.quarkus.security.spi.runtime.AuthorizationController;
 import io.quarkus.vertx.http.runtime.security.BasicAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
-import io.quarkus.vertx.http.runtime.security.HttpAuthorizer;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityRecorder;
+import io.quarkus.vertx.http.runtime.security.ManagementInterfaceHttpAuthorizer;
 import io.quarkus.vertx.http.runtime.security.PathMatchingHttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.QuarkusHttpUser;
 import io.smallrye.mutiny.Uni;
@@ -124,27 +124,23 @@ public class ManagementInterfaceSecurityRecorder {
         };
     }
 
-    public Handler<RoutingContext> permissionCheckHandler() {
+    public Handler<RoutingContext> permissionCheckHandler(ManagementInterfaceBuildTimeConfig buildTimeConfig,
+            Map<String, Supplier<HttpSecurityPolicy>> policies) {
         return new Handler<RoutingContext>() {
-            volatile HttpAuthorizer authorizer;
+            volatile ManagementInterfaceHttpAuthorizer authorizer;
 
             @Override
             public void handle(RoutingContext event) {
                 if (authorizer == null) {
-                    authorizer = CDI.current().select(HttpAuthorizer.class).get();
+                    PathMatchingHttpSecurityPolicy policy = new PathMatchingHttpSecurityPolicy();
+                    policy.init(buildTimeConfig.auth.permissions, policies, buildTimeConfig.rootPath);
+                    authorizer = new ManagementInterfaceHttpAuthorizer(
+                            CDI.current().select(HttpAuthenticator.class).get(),
+                            CDI.current().select(IdentityProviderManager.class).get(),
+                            CDI.current().select(AuthorizationController.class).get(),
+                            policy);
                 }
                 authorizer.checkPermission(event);
-            }
-        };
-    }
-
-    public BeanContainerListener initPermissions(ManagementInterfaceBuildTimeConfig buildTimeConfig,
-            Map<String, Supplier<HttpSecurityPolicy>> policies) {
-        return new BeanContainerListener() {
-            @Override
-            public void created(BeanContainer container) {
-                container.beanInstance(PathMatchingHttpSecurityPolicy.class)
-                        .init(buildTimeConfig.auth.permissions, policies, buildTimeConfig.rootPath);
             }
         };
     }
