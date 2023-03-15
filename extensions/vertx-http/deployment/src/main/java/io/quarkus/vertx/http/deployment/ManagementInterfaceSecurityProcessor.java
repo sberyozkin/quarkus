@@ -25,11 +25,21 @@ import io.quarkus.vertx.http.runtime.security.DenySecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
+import io.quarkus.vertx.http.runtime.security.ManagementInterfaceHttpAuthorizer;
+import io.quarkus.vertx.http.runtime.security.ManagementPathMatchingHttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.PermitSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.RolesAllowedHttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.SupplierImpl;
 
 public class ManagementInterfaceSecurityProcessor {
+
+    @BuildStep
+    public void builtins(ManagementInterfaceBuildTimeConfig buildTimeConfig,
+            BuildProducer<AdditionalBeanBuildItem> beanProducer) {
+        if (!buildTimeConfig.auth.permissions.isEmpty()) {
+            beanProducer.produce(AdditionalBeanBuildItem.unremovableOf(ManagementPathMatchingHttpSecurityPolicy.class));
+        }
+    }
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
@@ -77,7 +87,8 @@ public class ManagementInterfaceSecurityProcessor {
                 && capabilities.isPresent(Capability.SECURITY)) {
             beanProducer
                     .produce(AdditionalBeanBuildItem.builder().setUnremovable()
-                            .addBeanClass(HttpAuthenticator.class).build());
+                            .addBeanClass(HttpAuthenticator.class)
+                            .addBeanClass(ManagementInterfaceHttpAuthorizer.class).build());
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(
                             recorder.authenticationMechanismHandler(),
@@ -85,6 +96,10 @@ public class ManagementInterfaceSecurityProcessor {
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(recorder.permissionCheckHandler(buildTimeConfig, policyMap),
                             ManagementInterfaceFilterBuildItem.AUTHORIZATION));
+            if (!buildTimeConfig.auth.permissions.isEmpty()) {
+                beanContainerListenerBuildItemBuildProducer
+                        .produce(new BeanContainerListenerBuildItem(recorder.initPermissions(buildTimeConfig, policyMap)));
+            }
         } else {
             if (!buildTimeConfig.auth.permissions.isEmpty()) {
                 throw new IllegalStateException("HTTP permissions have been set however security is not enabled");
