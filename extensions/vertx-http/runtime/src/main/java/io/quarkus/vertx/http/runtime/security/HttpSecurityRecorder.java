@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.spi.CDI;
 
 import org.jboss.logging.Logger;
@@ -60,14 +61,21 @@ public class HttpSecurityRecorder {
         return new Handler<RoutingContext>() {
 
             volatile HttpAuthenticator authenticator;
+            volatile PathMatchingHttpSecurityPolicy pathMatchingPolicy;
 
             @Override
             public void handle(RoutingContext event) {
                 if (authenticator == null) {
                     authenticator = CDI.current().select(HttpAuthenticator.class).get();
+                    Instance<PathMatchingHttpSecurityPolicy> pathMatchingPolicyInstance = CDI.current()
+                            .select(PathMatchingHttpSecurityPolicy.class);
+                    pathMatchingPolicy = pathMatchingPolicyInstance.isResolvable() ? pathMatchingPolicyInstance.get() : null;
                 }
                 //we put the authenticator into the routing context so it can be used by other systems
                 event.put(HttpAuthenticator.class.getName(), authenticator);
+                if (pathMatchingPolicy != null) {
+                    event.put(AbstractPathMatchingHttpSecurityPolicy.class.getName(), pathMatchingPolicy);
+                }
 
                 //register the default auth failure handler
                 if (proactiveAuthentication) {

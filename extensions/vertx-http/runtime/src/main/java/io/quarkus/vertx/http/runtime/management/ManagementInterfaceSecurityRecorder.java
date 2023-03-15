@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.spi.CDI;
 
 import io.quarkus.arc.runtime.BeanContainer;
@@ -12,6 +13,7 @@ import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.request.AnonymousAuthenticationRequest;
+import io.quarkus.vertx.http.runtime.security.AbstractPathMatchingHttpSecurityPolicy;
 import io.quarkus.vertx.http.runtime.security.BasicAuthenticationMechanism;
 import io.quarkus.vertx.http.runtime.security.HttpAuthenticator;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityPolicy;
@@ -41,14 +43,21 @@ public class ManagementInterfaceSecurityRecorder {
         return new Handler<RoutingContext>() {
 
             volatile HttpAuthenticator authenticator;
+            volatile ManagementPathMatchingHttpSecurityPolicy pathMatchingPolicy;
 
             @Override
             public void handle(RoutingContext event) {
                 if (authenticator == null) {
                     authenticator = CDI.current().select(HttpAuthenticator.class).get();
+                    Instance<ManagementPathMatchingHttpSecurityPolicy> pathMatchingPolicyInstance = CDI.current()
+                            .select(ManagementPathMatchingHttpSecurityPolicy.class);
+                    pathMatchingPolicy = pathMatchingPolicyInstance.isResolvable() ? pathMatchingPolicyInstance.get() : null;
                 }
                 //we put the authenticator into the routing context so it can be used by other systems
                 event.put(HttpAuthenticator.class.getName(), authenticator);
+                if (pathMatchingPolicy != null) {
+                    event.put(AbstractPathMatchingHttpSecurityPolicy.class.getName(), pathMatchingPolicy);
+                }
 
                 //register the default auth failure handler
                 event.put(QuarkusHttpUser.AUTH_FAILURE_HANDLER, new HttpSecurityRecorder.DefaultAuthFailureHandler() {
