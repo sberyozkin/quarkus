@@ -91,7 +91,7 @@ public class ManagementInterfaceSecurityProcessor {
                             .addBeanClass(ManagementInterfaceHttpAuthorizer.class).build());
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(
-                            recorder.authenticationMechanismHandler(),
+                            recorder.authenticationMechanismHandler(buildTimeConfig.auth.proactive),
                             ManagementInterfaceFilterBuildItem.AUTHENTICATION));
             filterBuildItemBuildProducer
                     .produce(new ManagementInterfaceFilterBuildItem(recorder.permissionCheckHandler(buildTimeConfig, policyMap),
