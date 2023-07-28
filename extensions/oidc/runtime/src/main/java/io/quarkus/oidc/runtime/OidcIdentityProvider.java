@@ -23,6 +23,7 @@ import io.quarkus.oidc.TokenIntrospectionCache;
 import io.quarkus.oidc.UserInfo;
 import io.quarkus.oidc.UserInfoCache;
 import io.quarkus.oidc.common.runtime.OidcConstants;
+import io.quarkus.security.AuthenticationCompletionException;
 import io.quarkus.security.AuthenticationFailedException;
 import io.quarkus.security.credential.TokenCredential;
 import io.quarkus.security.identity.AuthenticationRequestContext;
@@ -271,6 +272,13 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
         if (tokenJson != null) {
             try {
                 OidcUtils.validatePrimaryJwtTokenType(resolvedContext.oidcConfig.token, tokenJson);
+                if (userInfo != null && resolvedContext.oidcConfig.token.isSubjectRequired()
+                        && !tokenJson.getString(Claims.sub.name()).equals(userInfo.getString(Claims.sub.name()))) {
+                    String errorMessage = String
+                            .format("Token and UserInfo do not have matching `sub` claims");
+                    return Uni.createFrom().failure(new AuthenticationCompletionException(errorMessage));
+                }
+
                 JsonObject rolesJson = getRolesJson(vertxContext, resolvedContext, tokenCred, tokenJson,
                         userInfo);
                 SecurityIdentity securityIdentity = validateAndCreateIdentity(vertxContext, tokenCred,
@@ -443,11 +451,13 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
             try {
                 LOG.debug("Verifying the JWT token with the local JWK keys");
                 return Uni.createFrom()
-                        .item(resolvedContext.provider.verifyJwtToken(token, enforceAudienceVerification, nonce));
+                        .item(resolvedContext.provider.verifyJwtToken(token, enforceAudienceVerification,
+                                resolvedContext.oidcConfig.token.isSubjectRequired(), nonce));
             } catch (Throwable t) {
                 if (t.getCause() instanceof UnresolvableKeyException) {
                     LOG.debug("No matching JWK key is found, refreshing and repeating the verification");
-                    return refreshJwksAndVerifyTokenUni(resolvedContext, token, enforceAudienceVerification, nonce);
+                    return refreshJwksAndVerifyTokenUni(resolvedContext, token, enforceAudienceVerification,
+                            resolvedContext.oidcConfig.token.isSubjectRequired(), nonce);
                 } else {
                     LOG.debugf("Token verification has failed: %s", t.getMessage());
                     return Uni.createFrom().failure(t);
@@ -465,8 +475,8 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
     }
 
     private Uni<TokenVerificationResult> refreshJwksAndVerifyTokenUni(TenantConfigContext resolvedContext, String token,
-            boolean enforceAudienceVerification, String nonce) {
-        return resolvedContext.provider.refreshJwksAndVerifyJwtToken(token, enforceAudienceVerification, nonce)
+            boolean enforceAudienceVerification, boolean subjectRequired, String nonce) {
+        return resolvedContext.provider.refreshJwksAndVerifyJwtToken(token, enforceAudienceVerification, subjectRequired, nonce)
                 .onFailure(f -> fallbackToIntrospectionIfNoMatchingKey(f, resolvedContext))
                 .recoverWithUni(f -> introspectTokenUni(resolvedContext, token, true));
     }
@@ -527,7 +537,7 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
 
         try {
             TokenVerificationResult result = resolvedContext.provider.verifyJwtToken(request.getToken().getToken(), false,
-                    null);
+                    false, null);
             return Uni.createFrom()
                     .item(validateAndCreateIdentity(null, request.getToken(), resolvedContext,
                             result.localVerificationResult, result.localVerificationResult, null, null));

@@ -133,19 +133,21 @@ public class OidcProvider implements Closeable {
     }
 
     public TokenVerificationResult verifySelfSignedJwtToken(String token) throws InvalidJwtException {
-        return verifyJwtTokenInternal(token, true, null, SYMMETRIC_ALGORITHM_CONSTRAINTS, new SymmetricKeyResolver(), true);
+        return verifyJwtTokenInternal(token, true, false, null, SYMMETRIC_ALGORITHM_CONSTRAINTS, new SymmetricKeyResolver(),
+                true);
     }
 
-    public TokenVerificationResult verifyJwtToken(String token, boolean enforceAudienceVerification, String nonce)
+    public TokenVerificationResult verifyJwtToken(String token, boolean enforceAudienceVerification, boolean subjectRequired,
+            String nonce)
             throws InvalidJwtException {
-        return verifyJwtTokenInternal(customizeJwtToken(token), enforceAudienceVerification, nonce,
+        return verifyJwtTokenInternal(customizeJwtToken(token), enforceAudienceVerification, subjectRequired, nonce,
                 (requiredAlgorithmConstraints != null ? requiredAlgorithmConstraints : ASYMMETRIC_ALGORITHM_CONSTRAINTS),
                 asymmetricKeyResolver, true);
     }
 
     public TokenVerificationResult verifyLogoutJwtToken(String token) throws InvalidJwtException {
         final boolean enforceExpReq = !oidcConfig.token.age.isPresent();
-        TokenVerificationResult result = verifyJwtTokenInternal(token, true, null, ASYMMETRIC_ALGORITHM_CONSTRAINTS,
+        TokenVerificationResult result = verifyJwtTokenInternal(token, true, false, null, ASYMMETRIC_ALGORITHM_CONSTRAINTS,
                 asymmetricKeyResolver,
                 enforceExpReq);
         if (!enforceExpReq) {
@@ -162,6 +164,7 @@ public class OidcProvider implements Closeable {
 
     private TokenVerificationResult verifyJwtTokenInternal(String token,
             boolean enforceAudienceVerification,
+            boolean subjectRequired,
             String nonce,
             AlgorithmConstraints algConstraints,
             VerificationKeyResolver verificationKeyResolver,
@@ -174,6 +177,9 @@ public class OidcProvider implements Closeable {
 
         if (enforceExpReq) {
             builder.setRequireExpirationTime();
+        }
+        if (subjectRequired) {
+            builder.setRequireSubject();
         }
         builder.setRequireIssuedAt();
 
@@ -258,14 +264,15 @@ public class OidcProvider implements Closeable {
     }
 
     public Uni<TokenVerificationResult> refreshJwksAndVerifyJwtToken(String token, boolean enforceAudienceVerification,
-            String nonce) {
+            boolean subjectRequired, String nonce) {
         return asymmetricKeyResolver.refresh().onItem()
                 .transformToUni(new Function<Void, Uni<? extends TokenVerificationResult>>() {
 
                     @Override
                     public Uni<? extends TokenVerificationResult> apply(Void v) {
                         try {
-                            return Uni.createFrom().item(verifyJwtToken(token, enforceAudienceVerification, nonce));
+                            return Uni.createFrom()
+                                    .item(verifyJwtToken(token, enforceAudienceVerification, subjectRequired, nonce));
                         } catch (Throwable t) {
                             return Uni.createFrom().failure(t);
                         }
