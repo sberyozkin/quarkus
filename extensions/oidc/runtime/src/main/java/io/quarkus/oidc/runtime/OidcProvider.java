@@ -133,19 +133,19 @@ public class OidcProvider implements Closeable {
     }
 
     public TokenVerificationResult verifySelfSignedJwtToken(String token) throws InvalidJwtException {
-        return verifyJwtTokenInternal(token, true, SYMMETRIC_ALGORITHM_CONSTRAINTS, new SymmetricKeyResolver(), true);
+        return verifyJwtTokenInternal(token, true, null, SYMMETRIC_ALGORITHM_CONSTRAINTS, new SymmetricKeyResolver(), true);
     }
 
-    public TokenVerificationResult verifyJwtToken(String token, boolean enforceAudienceVerification)
+    public TokenVerificationResult verifyJwtToken(String token, boolean enforceAudienceVerification, String nonce)
             throws InvalidJwtException {
-        return verifyJwtTokenInternal(customizeJwtToken(token), enforceAudienceVerification,
+        return verifyJwtTokenInternal(customizeJwtToken(token), enforceAudienceVerification, nonce,
                 (requiredAlgorithmConstraints != null ? requiredAlgorithmConstraints : ASYMMETRIC_ALGORITHM_CONSTRAINTS),
                 asymmetricKeyResolver, true);
     }
 
     public TokenVerificationResult verifyLogoutJwtToken(String token) throws InvalidJwtException {
         final boolean enforceExpReq = !oidcConfig.token.age.isPresent();
-        TokenVerificationResult result = verifyJwtTokenInternal(token, true, ASYMMETRIC_ALGORITHM_CONSTRAINTS,
+        TokenVerificationResult result = verifyJwtTokenInternal(token, true, null, ASYMMETRIC_ALGORITHM_CONSTRAINTS,
                 asymmetricKeyResolver,
                 enforceExpReq);
         if (!enforceExpReq) {
@@ -160,9 +160,12 @@ public class OidcProvider implements Closeable {
         return result;
     }
 
-    private TokenVerificationResult verifyJwtTokenInternal(String token, boolean enforceAudienceVerification,
+    private TokenVerificationResult verifyJwtTokenInternal(String token,
+            boolean enforceAudienceVerification,
+            String nonce,
             AlgorithmConstraints algConstraints,
-            VerificationKeyResolver verificationKeyResolver, boolean enforceExpReq) throws InvalidJwtException {
+            VerificationKeyResolver verificationKeyResolver,
+            boolean enforceExpReq) throws InvalidJwtException {
         JwtConsumerBuilder builder = new JwtConsumerBuilder();
 
         builder.setVerificationKeyResolver(verificationKeyResolver);
@@ -190,6 +193,9 @@ public class OidcProvider implements Closeable {
         }
         if (requiredClaims != null && !requiredClaims.isEmpty()) {
             builder.registerValidator(new CustomClaimsValidator(requiredClaims));
+        }
+        if (nonce != null) {
+            builder.registerValidator(new CustomClaimsValidator(Map.of(OidcConstants.NONCE, nonce)));
         }
 
         if (oidcConfig.token.lifespanGrace.isPresent()) {
@@ -251,14 +257,15 @@ public class OidcProvider implements Closeable {
         }
     }
 
-    public Uni<TokenVerificationResult> refreshJwksAndVerifyJwtToken(String token, boolean enforceAudienceVerification) {
+    public Uni<TokenVerificationResult> refreshJwksAndVerifyJwtToken(String token, boolean enforceAudienceVerification,
+            String nonce) {
         return asymmetricKeyResolver.refresh().onItem()
                 .transformToUni(new Function<Void, Uni<? extends TokenVerificationResult>>() {
 
                     @Override
                     public Uni<? extends TokenVerificationResult> apply(Void v) {
                         try {
-                            return Uni.createFrom().item(verifyJwtToken(token, enforceAudienceVerification));
+                            return Uni.createFrom().item(verifyJwtToken(token, enforceAudienceVerification, nonce));
                         } catch (Throwable t) {
                             return Uni.createFrom().failure(t);
                         }

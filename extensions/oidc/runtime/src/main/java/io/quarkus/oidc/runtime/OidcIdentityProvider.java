@@ -137,7 +137,8 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
                     primaryTokenUni = verifySelfSignedTokenUni(resolvedContext, request.getToken().getToken());
                 }
             } else {
-                primaryTokenUni = verifyTokenUni(resolvedContext, request.getToken().getToken(), isIdToken(request), null);
+                primaryTokenUni = verifyTokenUni(vertxContext, resolvedContext, request.getToken().getToken(),
+                        isIdToken(request), null);
             }
 
             // Verify Code Flow access token first if it is available and has to be verified.
@@ -185,7 +186,8 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
                             vertxContext.put(CODE_ACCESS_TOKEN_RESULT, codeAccessToken);
                         }
 
-                        Uni<TokenVerificationResult> tokenUni = verifyTokenUni(resolvedContext, request.getToken().getToken(),
+                        Uni<TokenVerificationResult> tokenUni = verifyTokenUni(vertxContext, resolvedContext,
+                                request.getToken().getToken(),
                                 false, userInfo);
 
                         return tokenUni.onItemOrFailure()
@@ -404,13 +406,13 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
                 && (resolvedContext.oidcConfig.authentication.verifyAccessToken
                         || resolvedContext.oidcConfig.roles.source.orElse(null) == Source.accesstoken)) {
             final String codeAccessToken = (String) vertxContext.get(OidcConstants.ACCESS_TOKEN_VALUE);
-            return verifyTokenUni(resolvedContext, codeAccessToken, false, userInfo);
+            return verifyTokenUni(vertxContext, resolvedContext, codeAccessToken, false, userInfo);
         } else {
             return NULL_CODE_ACCESS_TOKEN_UNI;
         }
     }
 
-    private Uni<TokenVerificationResult> verifyTokenUni(TenantConfigContext resolvedContext,
+    private Uni<TokenVerificationResult> verifyTokenUni(RoutingContext vertxContext, TenantConfigContext resolvedContext,
             String token, boolean enforceAudienceVerification, UserInfo userInfo) {
         if (OidcUtils.isOpaqueToken(token)) {
             if (!resolvedContext.oidcConfig.token.allowOpaqueTokenIntrospection) {
@@ -437,13 +439,15 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
             return introspectTokenUni(resolvedContext, token, false);
         } else {
             // Verify JWT token with the local JWK keys with a possible remote introspection fallback
+            final String nonce = vertxContext.get(OidcConstants.NONCE);
             try {
                 LOG.debug("Verifying the JWT token with the local JWK keys");
-                return Uni.createFrom().item(resolvedContext.provider.verifyJwtToken(token, enforceAudienceVerification));
+                return Uni.createFrom()
+                        .item(resolvedContext.provider.verifyJwtToken(token, enforceAudienceVerification, nonce));
             } catch (Throwable t) {
                 if (t.getCause() instanceof UnresolvableKeyException) {
                     LOG.debug("No matching JWK key is found, refreshing and repeating the verification");
-                    return refreshJwksAndVerifyTokenUni(resolvedContext, token, enforceAudienceVerification);
+                    return refreshJwksAndVerifyTokenUni(resolvedContext, token, enforceAudienceVerification, nonce);
                 } else {
                     LOG.debugf("Token verification has failed: %s", t.getMessage());
                     return Uni.createFrom().failure(t);
@@ -461,8 +465,8 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
     }
 
     private Uni<TokenVerificationResult> refreshJwksAndVerifyTokenUni(TenantConfigContext resolvedContext, String token,
-            boolean enforceAudienceVerification) {
-        return resolvedContext.provider.refreshJwksAndVerifyJwtToken(token, enforceAudienceVerification)
+            boolean enforceAudienceVerification, String nonce) {
+        return resolvedContext.provider.refreshJwksAndVerifyJwtToken(token, enforceAudienceVerification, nonce)
                 .onFailure(f -> fallbackToIntrospectionIfNoMatchingKey(f, resolvedContext))
                 .recoverWithUni(f -> introspectTokenUni(resolvedContext, token, true));
     }
@@ -522,7 +526,8 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
             TenantConfigContext resolvedContext) {
 
         try {
-            TokenVerificationResult result = resolvedContext.provider.verifyJwtToken(request.getToken().getToken(), false);
+            TokenVerificationResult result = resolvedContext.provider.verifyJwtToken(request.getToken().getToken(), false,
+                    null);
             return Uni.createFrom()
                     .item(validateAndCreateIdentity(null, request.getToken(), resolvedContext,
                             result.localVerificationResult, result.localVerificationResult, null, null));

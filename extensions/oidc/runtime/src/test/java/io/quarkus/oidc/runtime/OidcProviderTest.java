@@ -34,7 +34,7 @@ public class OidcProviderTest {
 
         OidcProvider provider = new OidcProvider(null, oidcConfig, jwkSet, null, null);
         try {
-            provider.verifyJwtToken(newToken, false);
+            provider.verifyJwtToken(newToken, false, null);
             fail("InvalidJwtException expected");
         } catch (InvalidJwtException ex) {
             // continue
@@ -48,7 +48,7 @@ public class OidcProviderTest {
             }
 
         }, null);
-        TokenVerificationResult result = provider.verifyJwtToken(newToken, false);
+        TokenVerificationResult result = provider.verifyJwtToken(newToken, false, null);
         assertEquals("http://keycloak/ream", result.localVerificationResult.getString("iss"));
     }
 
