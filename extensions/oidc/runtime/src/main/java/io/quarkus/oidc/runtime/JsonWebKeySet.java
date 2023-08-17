@@ -24,6 +24,7 @@ public class JsonWebKeySet {
     private Map<String, Key> keysWithKeyId = new HashMap<>();
     private Map<String, Key> keysWithThumbprints = new HashMap<>();
     private Key keyWithoutKeyIdAndThumbprint;
+    private int totalKeysSize;
 
     public JsonWebKeySet(String json) {
         initKeys(json);
@@ -32,6 +33,7 @@ public class JsonWebKeySet {
     private void initKeys(String json) {
         try {
             org.jose4j.jwk.JsonWebKeySet jwkSet = new org.jose4j.jwk.JsonWebKeySet(json);
+            totalKeysSize = jwkSet.getJsonWebKeys().size();
             for (JsonWebKey jwkKey : jwkSet.getJsonWebKeys()) {
                 if (isSupportedJwkKey(jwkKey)) {
                     if (jwkKey.getKeyId() != null) {
@@ -45,7 +47,7 @@ public class JsonWebKeySet {
                     }
                 }
             }
-            if (keysWithKeyId.isEmpty() && keysWithThumbprints.isEmpty() && jwkSet.getJsonWebKeys().size() == 1
+            if (keysWithKeyId.isEmpty() && keysWithThumbprints.isEmpty() && totalKeysSize == 1
                     && isSupportedJwkKey(jwkSet.getJsonWebKeys().get(0))) {
                 keyWithoutKeyIdAndThumbprint = jwkSet.getJsonWebKeys().get(0).getKey();
             }
@@ -65,6 +67,14 @@ public class JsonWebKeySet {
 
     public Key getKeyWithThumbprint(String x5t) {
         return keysWithThumbprints.get(x5t);
+    }
+
+    public Key getSingleKeyWithId() {
+        return totalKeysSize == 1 && keysWithKeyId.size() == 1 ? keysWithKeyId.values().iterator().next() : null;
+    }
+
+    public Key getSingleKeyWithThumbprint() {
+        return totalKeysSize == 1 && keysWithThumbprints.size() == 1 ? keysWithThumbprints.values().iterator().next() : null;
     }
 
     public Key getKeyWithoutKeyIdAndThumbprint() {
