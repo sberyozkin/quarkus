@@ -2,11 +2,15 @@ package io.quarkus.oidc.runtime;
 
 import java.security.Key;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.jose4j.jwk.JsonWebKey;
 import org.jose4j.jwk.PublicJsonWebKey;
+import org.jose4j.jws.JsonWebSignature;
+import org.jose4j.lang.InvalidAlgorithmException;
 import org.jose4j.lang.JoseException;
 
 import io.quarkus.oidc.OIDCException;
@@ -23,7 +27,7 @@ public class JsonWebKeySet {
 
     private Map<String, Key> keysWithKeyId = new HashMap<>();
     private Map<String, Key> keysWithThumbprints = new HashMap<>();
-    private Key keyWithoutKeyIdAndThumbprint;
+    private List<JsonWebKey> keysWithoutKeyIdAndThumbprint = new LinkedList<>();
 
     public JsonWebKeySet(String json) {
         initKeys(json);
@@ -43,12 +47,14 @@ public class JsonWebKeySet {
                     if (x5t != null && jwkKey.getKey() != null) {
                         keysWithThumbprints.put(x5t, jwkKey.getKey());
                     }
+                    if (jwkKey.getKeyId() == null && x5t == null
+                            && jwkKey.getKey() != null && KEY_TYPES.contains(jwkKey.getKeyType())
+                            && SIGNATURE_USE.equals(jwkKey.getUse())) {
+                        keysWithoutKeyIdAndThumbprint.add(jwkKey);
+                    }
                 }
             }
-            if (keysWithKeyId.isEmpty() && keysWithThumbprints.isEmpty() && jwkSet.getJsonWebKeys().size() == 1
-                    && isSupportedJwkKey(jwkSet.getJsonWebKeys().get(0))) {
-                keyWithoutKeyIdAndThumbprint = jwkSet.getJsonWebKeys().get(0).getKey();
-            }
+
         } catch (JoseException ex) {
             throw new OIDCException(ex);
         }
@@ -67,7 +73,27 @@ public class JsonWebKeySet {
         return keysWithThumbprints.get(x5t);
     }
 
-    public Key getKeyWithoutKeyIdAndThumbprint() {
-        return keyWithoutKeyIdAndThumbprint;
+    public Key getKeyWithoutKeyIdAndThumbprint(JsonWebSignature jws) {
+        if (keysWithoutKeyIdAndThumbprint.isEmpty()) {
+            return null;
+        }
+        try {
+            String alg = jws.getAlgorithmHeaderValue();
+            String keyType = jws.getKeyType();
+            if (keyType == null || !KEY_TYPES.contains(keyType)) {
+                return null;
+            }
+            for (int i = 0; i < keysWithoutKeyIdAndThumbprint.size(); i++) {
+                JsonWebKey jwk = keysWithoutKeyIdAndThumbprint.get(i);
+                if ((jwk.getAlgorithm() == null || jwk.getAlgorithm().equals(alg))
+                        && jwk.getKeyType().equals(keyType)) {
+                    return jwk.getKey();
+                }
+            }
+            return null;
+        } catch (InvalidAlgorithmException ex) {
+            // May happen if jws.getKeyType() may not deduce the key type from the algorithm
+            return null;
+        }
     }
 }

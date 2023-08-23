@@ -382,26 +382,22 @@ public class OidcProvider implements Closeable {
             if (kid != null) {
                 key = getKeyWithId(jws, kid);
                 if (key == null) {
-                    // if `kid` was set then the key must exist
-                    throw new UnresolvableKeyException(String.format("JWK with kid '%s' is not available", kid));
+                    LOG.debugf("JWK with kid %s is not available", kid);
                 }
             }
 
-            String thumbprint = null;
             if (key == null) {
-                thumbprint = jws.getHeader(HeaderParameterNames.X509_CERTIFICATE_THUMBPRINT);
+                String thumbprint = jws.getHeader(HeaderParameterNames.X509_CERTIFICATE_THUMBPRINT);
                 if (thumbprint != null) {
                     key = getKeyWithThumbprint(jws, thumbprint);
                     if (key == null) {
-                        // if only `x5t` was set then the key must exist
-                        throw new UnresolvableKeyException(
-                                String.format("JWK with thumbprint '%s' is not available", thumbprint));
+                        LOG.debugf("JWK with thumbprint %s is not available", thumbprint);
                     }
                 }
             }
 
-            if (key == null && kid == null && thumbprint == null) {
-                key = jwks.getKeyWithoutKeyIdAndThumbprint();
+            if (key == null) {
+                key = jwks.getKeyWithoutKeyIdAndThumbprint(jws);
             }
 
             if (key == null) {

@@ -114,6 +114,8 @@ public class OidcWiremockTestResource implements QuarkusTestResourceLifecycleMan
                                         "  \"keys\" : [\n" +
                                         "    {\n" +
                                         "      \"kty\":\"RSA\",\n" +
+                                        "      \"use\":\"sig\",\n" +
+                                        "      \"alg\":\"RS256\",\n" +
                                         "      \"n\":\"iJw33l1eVAsGoRlSyo-FCimeOc-AaZbzQ2iESA3Nkuo3TFb1zIkmt0kzlnWVGt48dkaIl13Vdefh9hqw_r9yNF8xZqX1fp0PnCWc5M_TX_ht5fm9y0TpbiVmsjeRMWZn4jr3DsFouxQ9aBXUJiu26V0vd2vrECeeAreFT4mtoHY13D2WVeJvboc5mEJcp50JNhxRCJ5UkY8jR_wfUk2Tzz4-fAj5xQaBccXnqJMu_1C6MjoCEiB7G1d13bVPReIeAGRKVJIF6ogoCN8JbrOhc_48lT4uyjbgnd24beatuKWodmWYhactFobRGYo5551cgMe8BoxpVQ4to30cGA0qjQ\",\n"
                                         +
                                         "      \"e\":\"AQAB\"\n" +

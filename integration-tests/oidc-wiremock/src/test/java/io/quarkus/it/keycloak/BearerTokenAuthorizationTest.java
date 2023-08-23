@@ -176,6 +176,14 @@ public class BearerTokenAuthorizationTest {
         RestAssured.given().auth().oauth2(getAccessToken("admin", Set.of("admin")))
                 .when().get("/api/admin/bearer-key-without-kid-thumbprint")
                 .then()
+                .statusCode(200);
+    }
+
+    @Test
+    public void testTokenWithKidAndPS256AlgAndKeyWithoutKidAndThumbprint() {
+        RestAssured.given().auth().oauth2(getAccessToken("admin", Set.of("admin"), SignatureAlgorithm.PS256))
+                .when().get("/api/admin/bearer-key-without-kid-thumbprint")
+                .then()
                 .statusCode(401);
     }
 
