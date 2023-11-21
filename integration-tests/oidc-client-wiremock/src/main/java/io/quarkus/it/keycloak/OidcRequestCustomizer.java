@@ -28,4 +28,14 @@ public class OidcRequestCustomizer implements OidcRequestFilter {
         }
         return "";
     }
+
+    @Override
+    public Scope scope() {
+        return Scope.CLIENT;
+    }
+
+    @Override
+    public Endpoint endpoint() {
+        return Endpoint.TOKEN;
+    }
 }

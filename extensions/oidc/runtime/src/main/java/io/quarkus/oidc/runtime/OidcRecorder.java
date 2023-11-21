@@ -433,7 +433,7 @@ public class OidcRecorder {
 
         WebClient client = WebClient.create(new io.vertx.mutiny.core.Vertx(vertx), options);
 
-        List<OidcRequestFilter> clientRequestFilters = OidcCommonUtils.getClientRequestCustomizer();
+        List<OidcRequestFilter> clientRequestFilters = OidcCommonUtils.getClientRequestCustomizer(true);
 
         Uni<OidcConfigurationMetadata> metadataUni = null;
         if (!oidcConfig.discoveryEnabled.orElse(true)) {

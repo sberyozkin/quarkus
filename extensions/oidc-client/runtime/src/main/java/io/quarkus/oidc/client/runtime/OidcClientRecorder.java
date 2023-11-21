@@ -122,7 +122,7 @@ public class OidcClientRecorder {
 
         WebClient client = WebClient.create(new io.vertx.mutiny.core.Vertx(vertx.get()), options);
 
-        List<OidcRequestFilter> clientRequestFilters = OidcCommonUtils.getClientRequestCustomizer();
+        List<OidcRequestFilter> clientRequestFilters = OidcCommonUtils.getClientRequestCustomizer(false);
 
         Uni<OidcConfigurationMetadata> tokenUrisUni = null;
         if (OidcCommonUtils.isAbsoluteUrl(oidcConfig.tokenPath)) {

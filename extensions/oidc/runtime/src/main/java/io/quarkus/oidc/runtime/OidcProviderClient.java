@@ -17,6 +17,7 @@ import io.quarkus.oidc.TokenIntrospection;
 import io.quarkus.oidc.UserInfo;
 import io.quarkus.oidc.common.OidcRequestContextProperties;
 import io.quarkus.oidc.common.OidcRequestFilter;
+import io.quarkus.oidc.common.OidcRequestFilter.Endpoint;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.oidc.common.runtime.OidcEndpointAccessException;
@@ -80,13 +81,13 @@ public class OidcProviderClient implements Closeable {
     }
 
     public Uni<JsonWebKeySet> getJsonWebKeySet(OidcRequestContextProperties contextProperties) {
-        return filter(client.getAbs(metadata.getJsonWebKeySetUri()), null, contextProperties).send().onItem()
+        return filter(Endpoint.JWKS, client.getAbs(metadata.getJsonWebKeySetUri()), null, contextProperties).send().onItem()
                 .transform(resp -> getJsonWebKeySet(resp));
     }
 
     public Uni<UserInfo> getUserInfo(String token) {
         LOG.debugf("Get UserInfo on: %s auth: %s", metadata.getUserInfoUri(), OidcConstants.BEARER_SCHEME + " " + token);
-        return filter(client.getAbs(metadata.getUserInfoUri()), null, null)
+        return filter(Endpoint.USERINFO, client.getAbs(metadata.getUserInfoUri()), null, null)
                 .putHeader(AUTHORIZATION_HEADER, OidcConstants.BEARER_SCHEME + " " + token)
                 .send().onItem().transform(resp -> getUserInfo(resp));
     }
@@ -168,7 +169,9 @@ public class OidcProviderClient implements Closeable {
         LOG.debugf("Get token on: %s params: %s headers: %s", metadata.getTokenUri(), formBody, request.headers());
         // Retry up to three times with a one-second delay between the retries if the connection is closed.
         Buffer buffer = OidcCommonUtils.encodeForm(formBody);
-        Uni<HttpResponse<Buffer>> response = filter(request, buffer, null).sendBuffer(buffer)
+
+        Endpoint endpoint = introspect ? Endpoint.INTROSPECTION : Endpoint.TOKEN;
+        Uni<HttpResponse<Buffer>> response = filter(endpoint, request, buffer, null).sendBuffer(buffer)
                 .onFailure(ConnectException.class)
                 .retry()
                 .atMost(oidcConfig.connectionRetryCount).onFailure().transform(t -> t.getCause());
@@ -224,10 +227,13 @@ public class OidcProviderClient implements Closeable {
         return clientJwtKey;
     }
 
-    private HttpRequest<Buffer> filter(HttpRequest<Buffer> request, Buffer body,
+    private HttpRequest<Buffer> filter(Endpoint endpoint, HttpRequest<Buffer> request, Buffer body,
             OidcRequestContextProperties contextProperties) {
         for (OidcRequestFilter filter : filters) {
-            filter.filter(request, body, contextProperties);
+            Endpoint filterEndpoint = filter.endpoint();
+            if (Endpoint.ALL == filterEndpoint || endpoint == filterEndpoint) {
+                filter.filter(request, body, contextProperties);
+            }
         }
         return request;
     }

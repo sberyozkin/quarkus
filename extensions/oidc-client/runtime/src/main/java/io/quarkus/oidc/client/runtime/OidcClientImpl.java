@@ -18,6 +18,7 @@ import io.quarkus.oidc.client.OidcClientConfig;
 import io.quarkus.oidc.client.OidcClientException;
 import io.quarkus.oidc.client.Tokens;
 import io.quarkus.oidc.common.OidcRequestFilter;
+import io.quarkus.oidc.common.OidcRequestFilter.Endpoint;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.smallrye.mutiny.Uni;
@@ -71,7 +72,7 @@ public class OidcClientImpl implements OidcClient {
             throw new OidcClientException(
                     "Only 'refresh_token' grant is supported, please call OidcClient#refreshTokens method instead");
         }
-        return getJsonResponse(tokenGrantParams, additionalGrantParameters, false);
+        return getJsonResponse(Endpoint.TOKEN, tokenGrantParams, additionalGrantParameters, false);
     }
 
     @Override
@@ -82,7 +83,7 @@ public class OidcClientImpl implements OidcClient {
         }
         MultiMap refreshGrantParams = copyMultiMap(commonRefreshGrantParams);
         refreshGrantParams.add(OidcConstants.REFRESH_TOKEN_VALUE, refreshToken);
-        return getJsonResponse(refreshGrantParams, additionalGrantParameters, true);
+        return getJsonResponse(Endpoint.TOKEN, refreshGrantParams, additionalGrantParameters, true);
     }
 
     @Override
@@ -94,7 +95,8 @@ public class OidcClientImpl implements OidcClient {
         if (tokenRevokeUri != null) {
             MultiMap tokenRevokeParams = new MultiMap(io.vertx.core.MultiMap.caseInsensitiveMultiMap());
             tokenRevokeParams.set(OidcConstants.REVOCATION_TOKEN, accessToken);
-            return postRequest(client.postAbs(tokenRevokeUri), tokenRevokeParams, additionalParameters, false)
+            return postRequest(Endpoint.TOKEN_REVOCATION, client.postAbs(tokenRevokeUri), tokenRevokeParams,
+                    additionalParameters, false)
                     .transform(resp -> toRevokeResponse(resp));
         } else {
             LOG.debugf("%s OidcClient can not revoke the access token because the revocation endpoint URL is not set");
@@ -111,20 +113,21 @@ public class OidcClientImpl implements OidcClient {
         return resp.statusCode() == 503 ? false : true;
     }
 
-    private Uni<Tokens> getJsonResponse(MultiMap formBody, Map<String, String> additionalGrantParameters, boolean refresh) {
+    private Uni<Tokens> getJsonResponse(Endpoint endpoint, MultiMap formBody, Map<String, String> additionalGrantParameters,
+            boolean refresh) {
         //Uni needs to be lazy by default, we don't send the request unless
         //something has subscribed to it. This is important for the CAS state
         //management in TokensHelper
         return Uni.createFrom().deferred(new Supplier<Uni<? extends Tokens>>() {
             @Override
             public Uni<Tokens> get() {
-                return postRequest(client.postAbs(tokenRequestUri), formBody, additionalGrantParameters, refresh)
+                return postRequest(endpoint, client.postAbs(tokenRequestUri), formBody, additionalGrantParameters, refresh)
                         .transform(resp -> emitGrantTokens(resp, refresh));
             }
         });
     }
 
-    private UniOnItem<HttpResponse<Buffer>> postRequest(HttpRequest<Buffer> request, MultiMap formBody,
+    private UniOnItem<HttpResponse<Buffer>> postRequest(Endpoint endpoint, HttpRequest<Buffer> request, MultiMap formBody,
             Map<String, String> additionalGrantParameters,
             boolean refresh) {
         MultiMap body = formBody;
@@ -165,7 +168,7 @@ public class OidcClientImpl implements OidcClient {
         }
         // Retry up to three times with a one-second delay between the retries if the connection is closed
         Buffer buffer = OidcCommonUtils.encodeForm(body);
-        Uni<HttpResponse<Buffer>> response = filter(request, buffer).sendBuffer(buffer)
+        Uni<HttpResponse<Buffer>> response = filter(endpoint, request, buffer).sendBuffer(buffer)
                 .onFailure(ConnectException.class)
                 .retry()
                 .atMost(oidcConfig.connectionRetryCount)
@@ -259,9 +262,12 @@ public class OidcClientImpl implements OidcClient {
         }
     }
 
-    private HttpRequest<Buffer> filter(HttpRequest<Buffer> request, Buffer body) {
+    private HttpRequest<Buffer> filter(Endpoint endpoint, HttpRequest<Buffer> request, Buffer body) {
         for (OidcRequestFilter filter : filters) {
-            filter.filter(request, body, null);
+            Endpoint filterEndpoint = filter.endpoint();
+            if (Endpoint.ALL == filterEndpoint || endpoint == filterEndpoint) {
+                filter.filter(request, body, null);
+            }
         }
         return request;
     }

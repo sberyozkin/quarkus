@@ -31,6 +31,8 @@ import io.quarkus.arc.ArcContainer;
 import io.quarkus.credentials.CredentialsProvider;
 import io.quarkus.credentials.runtime.CredentialsProviderFinder;
 import io.quarkus.oidc.common.OidcRequestFilter;
+import io.quarkus.oidc.common.OidcRequestFilter.Endpoint;
+import io.quarkus.oidc.common.OidcRequestFilter.Scope;
 import io.quarkus.oidc.common.runtime.OidcCommonConfig.Credentials;
 import io.quarkus.oidc.common.runtime.OidcCommonConfig.Credentials.Provider;
 import io.quarkus.oidc.common.runtime.OidcCommonConfig.Credentials.Secret;
@@ -432,7 +434,10 @@ public class OidcCommonUtils {
         final String discoveryUrl = authServerUrl + OidcConstants.WELL_KNOWN_CONFIGURATION;
         HttpRequest<Buffer> request = client.getAbs(discoveryUrl);
         for (OidcRequestFilter filter : filters) {
-            filter.filter(request, null, null);
+            Endpoint filterEndpoint = filter.endpoint();
+            if (filterEndpoint == Endpoint.ALL || filterEndpoint == Endpoint.DISCOVERY) {
+                filter.filter(request, null, null);
+            }
         }
         return request.send().onItem().transform(resp -> {
             if (resp.statusCode() == 200) {
@@ -478,10 +483,12 @@ public class OidcCommonUtils {
         return out.toByteArray();
     }
 
-    public static List<OidcRequestFilter> getClientRequestCustomizer() {
+    public static List<OidcRequestFilter> getClientRequestCustomizer(boolean server) {
+        Scope excludeScope = server ? Scope.CLIENT : Scope.SERVER;
         ArcContainer container = Arc.container();
         if (container != null) {
             return container.listAll(OidcRequestFilter.class).stream().map(handle -> handle.get())
+                    .filter(f -> f.scope() != excludeScope)
                     .collect(Collectors.toList());
         }
         return List.of();
