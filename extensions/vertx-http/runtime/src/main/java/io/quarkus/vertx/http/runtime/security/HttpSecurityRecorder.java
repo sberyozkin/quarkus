@@ -1,7 +1,15 @@
 package io.quarkus.vertx.http.runtime.security;
 
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -13,8 +21,11 @@ import jakarta.enterprise.inject.spi.CDI;
 
 import org.jboss.logging.Logger;
 
+import io.quarkus.arc.Arc;
+import io.quarkus.arc.InstanceHandle;
 import io.quarkus.runtime.RuntimeValue;
 import io.quarkus.runtime.annotations.Recorder;
+import io.quarkus.runtime.configuration.ConfigurationException;
 import io.quarkus.security.AuthenticationCompletionException;
 import io.quarkus.security.AuthenticationFailedException;
 import io.quarkus.security.AuthenticationRedirectException;
@@ -361,5 +372,48 @@ public class HttpSecurityRecorder {
         protected abstract void setPathMatchingPolicy(RoutingContext event);
 
         protected abstract boolean httpPermissionsEmpty();
+    }
+
+    public void setMtlsCertificateRoleProperties(HttpConfiguration config) {
+        if (config.auth.certificateRoleProperties.isPresent()) {
+            Map<String, Set<String>> roles = new HashMap<>();
+
+            Path rolesPath = config.auth.certificateRoleProperties.get();
+            URL rolesResource = null;
+            if (Files.exists(rolesPath)) {
+                try {
+                    rolesResource = rolesPath.toUri().toURL();
+                } catch (MalformedURLException e) {
+                    throw new ConfigurationException(
+                            "quarkus.http.auth.mtls-certificate-role-properties is malformed",
+                            Set.of("quarkus.http.auth.mtls-certificate-role-properties"));
+                }
+            } else {
+                rolesResource = Thread.currentThread().getContextClassLoader().getResource(rolesPath.toString());
+            }
+            Properties rolesProps = new Properties();
+            try (InputStream is = rolesResource.openStream()) {
+                rolesProps.load(is);
+                for (Map.Entry<Object, Object> e : rolesProps.entrySet()) {
+                    log.debugf("Added role mapping for %s:%s", e.getKey(), e.getValue());
+                    roles.put((String) e.getKey(), parseRoles((String) e.getValue()));
+                }
+            } catch (Exception e) {
+                log.warnf("Unable to read roles mappings from %s:%s", rolesPath, e.getMessage());
+            }
+            InstanceHandle<MtlsAuthenticationMechanism> mtls = Arc.container().instance(MtlsAuthenticationMechanism.class);
+            if (mtls.isAvailable()) {
+                mtls.get().setRoleMappings(roles);
+            }
+        }
+
+    }
+
+    private static Set<String> parseRoles(String value) {
+        Set<String> roles = new HashSet<>();
+        for (String s : value.split(",")) {
+            roles.add(s.trim());
+        }
+        return roles;
     }
 }
