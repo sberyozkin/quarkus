@@ -31,6 +31,13 @@ public class OidcCommonConfig {
     public Optional<Boolean> discoveryEnabled = Optional.empty();
 
     /**
+     * The relative path or absolute URL of the OIDC dynamic client registration endpoint.
+     * Set if {@link #discoveryEnabled} is `false` or a discovered token endpoint path must be customized.
+     */
+    @ConfigItem
+    public Optional<String> registrationPath = Optional.empty();
+
+    /**
      * The OIDC token endpoint that issues access and refresh tokens;
      * specified as a relative path or absolute URL.
      * Set if {@link #discoveryEnabled} is `false` or a discovered token endpoint path must be customized.
@@ -726,6 +733,14 @@ public class OidcCommonConfig {
 
     public void setRevokePath(String revokePath) {
         this.revokePath = Optional.of(revokePath);
+    }
+
+    public Optional<String> getRegistrationPath() {
+        return registrationPath;
+    }
+
+    public void setRegistrationPath(String registrationPath) {
+        this.registrationPath = Optional.of(registrationPath);
     }
 
     public Optional<String> getClientId() {

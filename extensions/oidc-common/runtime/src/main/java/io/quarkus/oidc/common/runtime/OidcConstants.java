@@ -76,4 +76,11 @@ public final class OidcConstants {
 
     public static final String OPENID_SCOPE = "openid";
     public static final String NONCE = "nonce";
+
+    public static final String REGISTRATION_CLIENT_URI = "registration_client_uri";
+    public static final String REGISTRATION_ACCESS_TOKEN = "registration_access_token";
+
+    public static final String CLIENT_METADATA_CLIENT_NAME = "client_name";
+    public static final String CLIENT_METADATA_REDIRECT_URIS = "redirect_uris";
+    public static final String CLIENT_METADATA_POST_LOGOUT_URIS = "post_logout_redirect_uris";
 }
