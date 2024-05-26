@@ -2,15 +2,16 @@ package io.quarkus.it.keycloak;
 
 import java.net.URI;
 
-import org.eclipse.microprofile.rest.client.inject.RestClient;
-
-import io.smallrye.mutiny.Uni;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+
+import io.smallrye.mutiny.Uni;
 
 @Path("/frontend")
 public class FrontendResource {
