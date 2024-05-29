@@ -17,6 +17,7 @@ public class UploadResource {
 
     @GET
     @RolesAllowed("admin")
+    @Path("/data")
     @Produces(MediaType.APPLICATION_JSON)
     public String bearerCertificateCustomValidator() {
         return "granted:" + identity.getRoles();

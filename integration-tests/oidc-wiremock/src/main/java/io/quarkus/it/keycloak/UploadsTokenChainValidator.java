@@ -15,13 +15,13 @@ import io.vertx.core.json.JsonObject;
 
 @ApplicationScoped
 @Unremovable
-@TenantFeature("uploads")
+@TenantFeature("uploadw")
 public class UploadsTokenChainValidator implements TokenCertificateValidator {
 
     @Override
     public void validate(OidcTenantConfig oidcConfig, List<X509Certificate> chain, String tokenClaims)
             throws CertificateException {
-        if (!"uploads".equals(oidcConfig.tenantId.get())) {
+        if (!"uploadw".equals(oidcConfig.tenantId.get())) {
             throw new RuntimeException("Unexpected tenant id");
         }
         String leafCertificateThumbprint = TrustStoreUtils.calculateThumprint(chain.get(0));

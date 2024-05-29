@@ -232,7 +232,7 @@ public class BearerTokenAuthorizationTest {
                 subjectPrivateKey, true);
 
         RestAssured.given().auth().oauth2(accessToken)
-                .when().get("/upload")
+                .when().get("/upload/data")
                 .then()
                 .statusCode(200)
                 .body(Matchers.containsString("admin"));
@@ -243,7 +243,7 @@ public class BearerTokenAuthorizationTest {
                 subjectPrivateKey, false);
 
         RestAssured.given().auth().oauth2(accessToken)
-                .when().get("/upload")
+                .when().get("/upload/data")
                 .then()
                 .statusCode(401);
 
