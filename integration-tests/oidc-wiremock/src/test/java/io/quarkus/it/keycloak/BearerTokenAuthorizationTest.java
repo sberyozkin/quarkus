@@ -220,6 +220,36 @@ public class BearerTokenAuthorizationTest {
     }
 
     @Test
+    public void testCertChainWithCustomValidatorUpload() throws Exception {
+        X509Certificate rootCert = KeyUtils.getCertificate(ResourceUtils.readResource("/ca.cert.pem"));
+        X509Certificate intermediateCert = KeyUtils.getCertificate(ResourceUtils.readResource("/intermediate.cert.pem"));
+        X509Certificate subjectCert = KeyUtils.getCertificate(ResourceUtils.readResource("/www.quarkustest.com.cert.pem"));
+        PrivateKey subjectPrivateKey = KeyUtils.readPrivateKey("/www.quarkustest.com.key.pem");
+
+        // Send the token with the valid certificate chain and bind it to the token claim
+        String accessToken = getAccessTokenForCustomValidator(
+                List.of(subjectCert, intermediateCert, rootCert),
+                subjectPrivateKey, true);
+
+        RestAssured.given().auth().oauth2(accessToken)
+                .when().get("/upload")
+                .then()
+                .statusCode(200)
+                .body(Matchers.containsString("admin"));
+
+        // Send the token with the valid certificate chain but do bind it to the token claim
+        accessToken = getAccessTokenForCustomValidator(
+                List.of(subjectCert, intermediateCert, rootCert),
+                subjectPrivateKey, false);
+
+        RestAssured.given().auth().oauth2(accessToken)
+                .when().get("/upload")
+                .then()
+                .statusCode(401);
+
+    }
+
+    @Test
     public void testAccessAdminResourceWithFullCertChain() throws Exception {
         X509Certificate rootCert = KeyUtils.getCertificate(ResourceUtils.readResource("/ca.cert.pem"));
         X509Certificate intermediateCert = KeyUtils.getCertificate(ResourceUtils.readResource("/intermediate.cert.pem"));
