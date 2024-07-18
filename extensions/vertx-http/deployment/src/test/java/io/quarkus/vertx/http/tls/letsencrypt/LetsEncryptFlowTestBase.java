@@ -22,6 +22,7 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.HttpResponse;
@@ -84,18 +85,41 @@ public abstract class LetsEncryptFlowTestBase {
         response = await(client.getAbs(readyEndpoint).send());
         Assertions.assertThat(response.statusCode()).isEqualTo(204);
 
+        // Make sure invalid tokens are rejected
+        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendJsonObject(
+                new JsonObject()));
+        Assertions.assertThat(response.statusCode()).isEqualTo(400);
+
+        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendJsonObject(
+                new JsonObject()
+                        .put("challenge-content", "aaa")));
+        Assertions.assertThat(response.statusCode()).isEqualTo(400);
+
+        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendJsonObject(
+                new JsonObject()
+                        .put("challenge-resource", "aaa")));
+        Assertions.assertThat(response.statusCode()).isEqualTo(400);
+
         // Set the challenge
-        String challenge = UUID.randomUUID().toString();
-        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendBuffer(Buffer.buffer(challenge)));
+        String challengeContent = UUID.randomUUID().toString();
+        String challengeToken = UUID.randomUUID().toString();
+        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendJsonObject(
+                new JsonObject()
+                        .put("challenge-content", challengeContent)
+                        .put("challenge-resource", challengeToken)));
+
         Assertions.assertThat(response.statusCode()).isEqualTo(204);
 
         // Verify that the challenge is set
         response = await(client.getAbs(readyEndpoint).send());
         Assertions.assertThat(response.statusCode()).isEqualTo(200);
-        Assertions.assertThat(response.bodyAsString()).isEqualTo(challenge);
+        Assertions.assertThat(response.bodyAsJsonObject()).isEqualTo(new JsonObject()
+                .put("challenge-content", challengeContent)
+                .put("challenge-resource", challengeToken));
 
         // Make sure the challenge cannot be set again
-        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendBuffer(Buffer.buffer("again")));
+        response = await(client.postAbs(getLetsEncryptManagementEndpoint()).sendJsonObject(
+                new JsonObject().put("challenge-resource", "again").put("challenge-content", "again")));
         Assertions.assertThat(response.statusCode()).isEqualTo(400);
 
         // Verify that the let's encrypt management endpoint only support GET, POST and DELETE
@@ -104,20 +128,30 @@ public abstract class LetsEncryptFlowTestBase {
         Assertions.assertThat(response.statusCode()).isEqualTo(405);
 
         // Verify that the application is serving the challenge
-        response = await(client.getAbs(getChallengeEndpoint()).send());
+        response = await(client.getAbs(getChallengeEndpoint() + "/" + challengeToken).send());
         Assertions.assertThat(response.statusCode()).isEqualTo(200);
-        Assertions.assertThat(response.bodyAsString()).isEqualTo(challenge);
+        Assertions.assertThat(response.bodyAsString()).isEqualTo(challengeContent);
+
+        // Verify that other path and token are not valid
+        response = await(client.getAbs(getChallengeEndpoint() + "/" + "whatever").send());
+        Assertions.assertThat(response.statusCode()).isEqualTo(404);
+        response = await(client.getAbs(getChallengeEndpoint()).send());
+        Assertions.assertThat(response.statusCode()).isEqualTo(404);
 
         // Verify that only GET is supported when serving the challenge
         response = await(client.postAbs(getChallengeEndpoint()).send());
         Assertions.assertThat(response.statusCode()).isEqualTo(405);
         response = await(client.deleteAbs(getChallengeEndpoint()).send());
         Assertions.assertThat(response.statusCode()).isEqualTo(405);
+        response = await(client.postAbs(getChallengeEndpoint() + "/" + challengeToken).send());
+        Assertions.assertThat(response.statusCode()).isEqualTo(405);
+        response = await(client.deleteAbs(getChallengeEndpoint() + "/" + challengeToken).send());
+        Assertions.assertThat(response.statusCode()).isEqualTo(405);
 
         // Verify that the challenge can be served multiple times
-        response = await(client.getAbs(getChallengeEndpoint()).send());
+        response = await(client.getAbs(getChallengeEndpoint() + "/" + challengeToken).send());
         Assertions.assertThat(response.statusCode()).isEqualTo(200);
-        Assertions.assertThat(response.bodyAsString()).isEqualTo(challenge);
+        Assertions.assertThat(response.bodyAsString()).isEqualTo(challengeContent);
 
         // Replace the certs on disk
         updateCerts();

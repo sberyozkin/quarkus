@@ -79,7 +79,7 @@ public class LetsEncryptFlowTest extends LetsEncryptFlowTestBase {
     @TestHTTPResource(value = "/q/lets-encrypt/certs", tls = true)
     String reload;
 
-    @TestHTTPResource(value = "/.well-known/acme-challenge/whatever", tls = true)
+    @TestHTTPResource(value = "/.well-known/acme-challenge", tls = true)
     String challenge;
 
     @Test

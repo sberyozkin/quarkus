@@ -66,8 +66,7 @@ public class CertificatesProcessor {
         recorder.initialize(registryBuildItem.registry());
 
         // Route to handle the Let's Encrypt challenge - primary HTTP server
-        routes.produce(RouteBuildItem.newAbsoluteRoute("/.well-known/acme-challenge/*")
-                .withRoutePathConfigKey("quarkus.tls.lets-encrypt.root-path")
+        routes.produce(RouteBuildItem.newAbsoluteRoute("/.well-known/acme-challenge/:token")
                 .withRequestHandler(recorder.challengeHandler())
                 .build());
 

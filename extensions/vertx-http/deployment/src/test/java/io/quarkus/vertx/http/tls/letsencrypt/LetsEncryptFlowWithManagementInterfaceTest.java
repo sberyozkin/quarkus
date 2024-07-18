@@ -81,7 +81,7 @@ public class LetsEncryptFlowWithManagementInterfaceTest extends LetsEncryptFlowT
     @TestHTTPResource(value = "/lets-encrypt/certs", tls = true, management = true)
     String reload;
 
-    @TestHTTPResource(value = "/.well-known/acme-challenge/whatever", tls = true)
+    @TestHTTPResource(value = "/.well-known/acme-challenge", tls = true)
     String challenge;
 
     @Test

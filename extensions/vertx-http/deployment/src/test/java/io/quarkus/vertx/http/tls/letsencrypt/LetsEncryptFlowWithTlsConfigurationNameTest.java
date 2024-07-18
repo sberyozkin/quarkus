@@ -82,7 +82,7 @@ public class LetsEncryptFlowWithTlsConfigurationNameTest extends LetsEncryptFlow
     @TestHTTPResource(value = "/lets-encrypt/certs", management = true)
     String reload;
 
-    @TestHTTPResource(value = "/.well-known/acme-challenge/whatever", tls = true)
+    @TestHTTPResource(value = "/.well-known/acme-challenge", tls = true)
     String challenge;
 
     @Test

@@ -1,7 +1,5 @@
 package io.quarkus.tls;
 
-import java.util.Optional;
-
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
@@ -16,10 +14,5 @@ public interface LetsEncryptBuildTimeConfig {
      */
     @WithDefault("false")
     boolean enabled();
-
-    /**
-     * The root path for the Let's Encrypt challenge.
-     */
-    Optional<String> rootPath();
 
 }
