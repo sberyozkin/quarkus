@@ -11,7 +11,6 @@ import java.util.UUID;
 
 import javax.net.ssl.SSLHandshakeException;
 
-import io.vertx.ext.web.handler.BodyHandler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 
@@ -30,6 +29,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.ext.web.handler.BodyHandler;
 
 public abstract class LetsEncryptFlowTestBase {
 
@@ -203,13 +203,13 @@ public abstract class LetsEncryptFlowTestBase {
             router.route().order(ROUTE_ORDER_BODY_HANDLER).handler(BodyHandler.create());
             router
                     .get("/tls").handler(rc -> {
-                Assertions.assertThat(rc.request().connection().isSsl()).isTrue();
-                Assertions.assertThat(rc.request().isSSL()).isTrue();
-                Assertions.assertThat(rc.request().connection().sslSession()).isNotNull();
-                var exp = ((X509Certificate) rc.request().connection().sslSession().getLocalCertificates()[0])
-                        .getNotAfter().toInstant().toEpochMilli();
-                rc.response().end("expiration: " + exp);
-            });
+                        Assertions.assertThat(rc.request().connection().isSsl()).isTrue();
+                        Assertions.assertThat(rc.request().isSSL()).isTrue();
+                        Assertions.assertThat(rc.request().connection().sslSession()).isNotNull();
+                        var exp = ((X509Certificate) rc.request().connection().sslSession().getLocalCertificates()[0])
+                                .getNotAfter().toInstant().toEpochMilli();
+                        rc.response().end("expiration: " + exp);
+                    });
         }
     }
 
