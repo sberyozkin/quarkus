@@ -21,7 +21,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
 
 /**
  * Recorder for Let's Encrypt support.
@@ -140,7 +139,14 @@ public class LetsEncryptRecorder {
      * @param rc the routing context
      */
     private void setupChallenge(RoutingContext rc) {
-        AcmeChallenge challenge = AcmeChallenge.fromJson(rc.body().asJsonObject());
+        AcmeChallenge challenge;
+        if (rc.request().method() == HttpMethod.POST) {
+            challenge = AcmeChallenge.fromJson(rc.body().asJsonObject());
+        } else {
+            String token = rc.request().getParam("challenge-resource");
+            String challengeContent = rc.request().getParam("challenge-content");
+            challenge = new AcmeChallenge(token, challengeContent);
+        }
         if (!challenge.isValid()) {
             LOGGER.warn("Invalid Let's Encrypt challenge: " + rc.body().asJsonObject());
             rc.response().setStatusCode(400).end();
@@ -253,7 +259,7 @@ public class LetsEncryptRecorder {
         return new Consumer<Route>() {
             @Override
             public void accept(Route r) {
-                r.method(HttpMethod.POST).method(HttpMethod.GET).method(HttpMethod.DELETE).handler(BodyHandler.create());
+                r.method(HttpMethod.POST).method(HttpMethod.GET).method(HttpMethod.DELETE);
             }
         };
     }
@@ -267,7 +273,12 @@ public class LetsEncryptRecorder {
                 } else if (rc.request().method() == HttpMethod.DELETE) {
                     cleanupChallenge(rc);
                 } else if (rc.request().method() == HttpMethod.GET) {
-                    ready(rc);
+                    if (rc.request().getParam("challenge-resource") != null) {
+                        // Alternative upload method
+                        setupChallenge(rc);
+                    } else {
+                        ready(rc);
+                    }
                 } else {
                     rc.response().setStatusCode(405).end();
                 }

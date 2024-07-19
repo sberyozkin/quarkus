@@ -1,5 +1,6 @@
 package io.quarkus.vertx.http.tls.letsencrypt;
 
+import static io.quarkus.vertx.http.runtime.RouteConstants.ROUTE_ORDER_BODY_HANDLER;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
@@ -10,6 +11,7 @@ import java.util.UUID;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import io.vertx.ext.web.handler.BodyHandler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 
@@ -198,7 +200,9 @@ public abstract class LetsEncryptFlowTestBase {
     public static class MyBean {
 
         public void register(@Observes Router router) {
-            router.get("/tls").handler(rc -> {
+            router.route().order(ROUTE_ORDER_BODY_HANDLER).handler(BodyHandler.create());
+            router
+                    .get("/tls").handler(rc -> {
                 Assertions.assertThat(rc.request().connection().isSsl()).isTrue();
                 Assertions.assertThat(rc.request().isSSL()).isTrue();
                 Assertions.assertThat(rc.request().connection().sslSession()).isNotNull();
