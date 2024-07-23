@@ -17,6 +17,8 @@ import io.smallrye.certs.CertificateRequest;
 import io.smallrye.certs.Format;
 import picocli.CommandLine;
 
+@CommandLine.Command(name = "prepare", mixinStandardHelpOptions = true, description = "Prepare the environment to receive Let's Encrypt certificates."
+        + " Make sure to restart the application after having run this command.")
 public class LetsEncryptPrepareCommand implements Callable<Integer> {
 
     static System.Logger LOGGER = System.getLogger("lets-encrypt-prepare");
@@ -28,10 +30,6 @@ public class LetsEncryptPrepareCommand implements Callable<Integer> {
     @CommandLine.Option(names = { "-n",
             "--tls-configuration-name" }, description = "The name of the TLS configuration to be used, if not set, the default configuration is used")
     String tlsConfigurationName;
-
-    @CommandLine.Option(names = {
-            "--no-management-interface" }, description = "Do not use the management interface. If passed, the management interface is not enabled.", defaultValue = "false")
-    boolean noManagementInterface;
 
     @Override
     public Integer call() throws Exception {
@@ -81,16 +79,15 @@ public class LetsEncryptPrepareCommand implements Callable<Integer> {
         }
 
         // We cannot set quarkus.management.enabled and quarkus.tls.lets-encrypt.enabled as they are build time properties.
-        addOrReplaceProperty(dotEnvContent, prefix + ".key-store.pem.0.cert", CERT_FILE.getAbsolutePath());
-        addOrReplaceProperty(dotEnvContent, prefix + ".key-store.pem.0.key", KEY_FILE.getAbsolutePath());
+        addOrReplaceProperty(dotEnvContent, prefix + ".key-store.pem.acme.cert", CERT_FILE.getAbsolutePath());
+        addOrReplaceProperty(dotEnvContent, prefix + ".key-store.pem.acme.key", KEY_FILE.getAbsolutePath());
 
         Files.write(DOT_ENV_FILE.toPath(), dotEnvContent);
         LOGGER.log(System.Logger.Level.INFO, "✅ .env file configured for Let's Encrypt: {0}", DOT_ENV_FILE.getAbsolutePath());
         LOGGER.log(System.Logger.Level.INFO,
-                "➡\uFE0F Start the application and run `quarkus tls lets-encrypt generate --domain={0}{1}{2}` to complete the challenge",
+                "➡\uFE0F Start the application and run `quarkus tls lets-encrypt issue-certificate --domain={0}{1}` to complete the challenge",
                 domain,
-                tlsConfigurationName != null ? " -tls-configuration-name=" + tlsConfigurationName : "",
-                noManagementInterface ? "" : " --no-management-interface");
+                tlsConfigurationName != null ? " -tls-configuration-name=" + tlsConfigurationName : "");
         return 0;
     }
 
