@@ -1,5 +1,6 @@
 package io.quarkus.tls.cli.letsencrypt;
 
+import static io.quarkus.tls.cli.letsencrypt.LetsEncryptConstants.*;
 import static io.quarkus.tls.cli.letsencrypt.LetsEncryptConstants.CERT_FILE;
 import static io.quarkus.tls.cli.letsencrypt.LetsEncryptConstants.DOT_ENV_FILE;
 import static io.quarkus.tls.cli.letsencrypt.LetsEncryptConstants.KEY_FILE;
@@ -68,6 +69,11 @@ public class LetsEncryptPrepareCommand implements Callable<Integer> {
         } else {
             LOGGER.log(System.Logger.Level.INFO, "✅ Certificate already exists and is still valid: {0}",
                     CERT_FILE.getAbsolutePath());
+        }
+
+        // Delete the CA file, we do not use it.
+        if (CA_FILE.isFile()) {
+            CA_FILE.delete();
         }
 
         // Step 3 - Create .env file or append if exists
