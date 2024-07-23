@@ -73,7 +73,7 @@ public class LetsEncryptHelpers {
             String letsEncryptPath,
             boolean staging,
             String contactEmail) {
-        LOGGER.log(INFO, "Creating {0} Let's Encrypt account", (staging ? "staging" : ""));
+        LOGGER.log(INFO, "\uD83D\uDD35 Creating {0} Let's Encrypt account", (staging ? "staging" : ""));
 
         AcmeAccount acmeAccount = AcmeAccount.builder()
                 .setTermsOfServiceAgreed(true)
@@ -163,7 +163,7 @@ public class LetsEncryptHelpers {
     }
 
     private static AcmeAccount getAccount(File letsEncryptPath) {
-        LOGGER.log(INFO, "Getting account from {0}", letsEncryptPath);
+        LOGGER.log(DEBUG, "Getting account from {0}", letsEncryptPath);
 
         JsonObject json = readAccountJson(letsEncryptPath);
         AcmeAccount.Builder builder = AcmeAccount.builder().setTermsOfServiceAgreed(true)
