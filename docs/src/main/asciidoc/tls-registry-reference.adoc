@@ -937,7 +937,7 @@ Before you request a Let's Encrypt certificate, you must run TLS registry Let's 
 
 [source, shell]
 ----
-quarkus tls-registry lets-encrypt prepare --domain=<domain-dns-name>
+quarkus tlslets-encrypt prepare --domain=<domain-dns-name>
 ----
 
 [IMPORTANT]
@@ -967,16 +967,16 @@ Run the `issue-certificate` command to acquire your first Let's Encrypt certific
 
 [source, shell]
 ----
-quarkus tls-registry lets-encrypt issue-certificate
---domain=<domain-dns-name> <1>
---email=<your contact email> <2>
---management-url=https://localhost:9000 <3>
+quarkus tls-registry lets-encrypt issue-certificate \
+  --domain=<domain-dns-name> \ <1>
+  --email=<your contact email> \ <2>
+  --management-url=https://localhost:9000 <3>
 ----
 <1> Set your domain name.
 <2> Provide your contact email address that Let's Encrypt can use to contact you in case of any issues with your Let's Encrypt account.
 <3> Set your application management URL which can be used to handle ACME challenges. Use `https://localhost:8443/` if you chose not to enable a management router in the <<lets-encrypt-prerequisites>> step.
 
-During this command, TLS registry CLI checks a Quarkus management router's readiness, creates and records a Let's Encrypt account information, issues a Let's Encrypt certificate request, and communicates with a Quarkus management router to have ACME challenges resolved.
+During this command, the TLS registry CLI checks if the application is prepared to serve the challenge, creates and records Let's Encrypt account information, issues a Let's Encrypt certificate request, and interacts with the Quarkus application to resolve ACME challenges.
 
 Once the Let's Encrypt certificate chain and private key have been successfully acquired, they are converted to PEM format and copied to your application's `.letsencrypt` folder. TLS registry is informed that a new certificate and private key are ready and it reloads them automatically.
 
@@ -993,12 +993,12 @@ Run the following command to renew your Let's Encrypt certificate:
 
 [source, shell]
 ----
-quarkus tls-registry lets-encrypt renew-certificate
---domain=<domain-dns-name> <1>
+quarkus tls-registry lets-encrypt renew-certificate \
+  --domain=<domain-dns-name> <1>
 ----
 <1> Set your domain name.
 
-During this command, TLS registry CLI reads a Let's Encrypt account information recorded during the <<lets-encrypt-issue-certificate>> step, issues a Let's Encrypt certificate request, and communicates with a Quarkus management router to have ACME challenges resolved.
+During this command, TLS registry CLI reads a Let's Encrypt account information recorded during the <<lets-encrypt-issue-certificate>> step, issues a Let's Encrypt certificate request, and communicates with a Quarkus application to have ACME challenges resolved.
 
 Once the Let's Encrypt certificate chain and private key have been successfully renewed, they are converted to PEM format and copied to your application's `.letsencrypt` folder. TLS registry is informed that a new certificate and private key are ready and it reloads them automatically.
 
