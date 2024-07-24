@@ -903,7 +903,7 @@ Make sure that a fully resolvable DNS domain name is available and can be used t
 This domain name is used for creating a Let's Encrypt account, and supporting Let's Encrypt ACME challenges to prove that you own this domain.
 You can use https://ngrok.com/[Ngrok] to start experimenting with the Quarkus Let's Encrypt ACME feature, see <<lets-encrypt-ngrok>> section below for more information.
 
-Your Quarkus HTTPS application must use a build-time property to enable a Let's Encrypt ACME challenge management route:
+Your Quarkus HTTPS application must use a _build-time_ property to enable a Let's Encrypt ACME challenge management route:
 
 [source, properties]
 ----
