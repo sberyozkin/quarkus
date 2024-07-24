@@ -911,7 +911,7 @@ quarkus.tls.lets-encrypt.enabled=true
 ----
 
 TLS registry can serve ACME challenge requests from either the main or management router.
-Using a management router is recommended to let Quarkus deal with ACME challenge requests separately to the main application's deployment and security requirements:
+Using a management router is **strongly** recommended to let Quarkus deal with ACME challenge requests separately to the main application's deployment and security requirements:
 
 [source, properties]
 ----
