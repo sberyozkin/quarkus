@@ -14,9 +14,11 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.runtime.util.ClassPathUtils;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.keycloak.client.KeycloakTestClient;
+import io.quarkus.test.keycloak.client.KeycloakTestClient.Tls;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.KeyStoreOptions;
@@ -25,12 +27,14 @@ import io.vertx.mutiny.ext.web.client.HttpResponse;
 import io.vertx.mutiny.ext.web.client.WebClient;
 
 @QuarkusTest
+@QuarkusTestResource(KeycloakTestResourceLifecycleManager.class)
 public class OidcMtlsTest {
 
-    @TestHTTPResource(ssl = true)
-    URL url;
+    final KeycloakTestClient client = new KeycloakTestClient(
+            new Tls("oidc-client-keystore.p12", "password", "oidc-client-truststore.p12", "password"));
 
-    KeycloakTestClient keycloakClient = new KeycloakTestClient();
+    @TestHTTPResource(tls = true)
+    URL url;
 
     @Test
     public void testGetIdentityNames() throws Exception {
@@ -41,7 +45,8 @@ public class OidcMtlsTest {
 
             // HTTP 200
             HttpResponse<io.vertx.mutiny.core.buffer.Buffer> resp = webClient.get("/service/name")
-                    .putHeader("Authorization", OidcConstants.BEARER_SCHEME + " " + keycloakClient.getAccessToken("alice"))
+                    .putHeader("Authorization",
+                            OidcConstants.BEARER_SCHEME + " " + getAccessToken("alice"))
                     .send().await()
                     .indefinitely();
             assertEquals(200, resp.statusCode());
@@ -57,6 +62,10 @@ public class OidcMtlsTest {
         } finally {
             vertx.close();
         }
+    }
+
+    private String getAccessToken(String userName) {
+        return client.getAccessToken(userName, "backend-service");
     }
 
     private WebClientOptions createWebClientOptions() throws Exception {
