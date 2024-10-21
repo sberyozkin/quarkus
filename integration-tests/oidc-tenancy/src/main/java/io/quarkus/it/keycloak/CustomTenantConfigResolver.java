@@ -1,6 +1,7 @@
 package io.quarkus.it.keycloak;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -52,6 +53,8 @@ public class CustomTenantConfigResolver implements TenantConfigResolver {
                     // authServerUri points to the JAX-RS `OidcResource`, root path is `/oidc`
                     final String authServerUri;
                     if (path.contains("tenant-opaque")) {
+                        config.token.setRequiredClaims(Map.of("required_claim", "1"));
+
                         if (path.endsWith("/tenant-opaque/tenant-oidc/api/user")) {
                             authServerUri = uri.replace("/tenant-opaque/tenant-oidc/api/user", "/oidc");
                         } else if (path.endsWith("/tenant-opaque/tenant-oidc/api/user-permission")) {

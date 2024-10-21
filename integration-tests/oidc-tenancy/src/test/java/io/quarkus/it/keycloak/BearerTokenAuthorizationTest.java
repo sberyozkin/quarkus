@@ -723,6 +723,22 @@ public class BearerTokenAuthorizationTest {
                 .when().get("/tenant-opaque/tenant-oidc/api/admin-permission")
                 .then()
                 .statusCode(403);
+
+        // Successful request with opaque token 2
+        String opaqueToken2 = getOpaqueAccessToken2FromSimpleOidc();
+        RestAssured.given().auth().oauth2(opaqueToken2)
+                .when().get("/tenant-opaque/tenant-oidc/api/user-permission")
+                .then()
+                .statusCode(200)
+                .body(equalTo("user"));
+
+        // Expected to fail now because its introspection does not include the expected required claim
+        RestAssured.given().auth().oauth2(opaqueToken2)
+                .when().get("/tenant-opaque/tenant-oidc/api/user-permission")
+                .then()
+                .statusCode(401);
+
+        RestAssured.when().post("/oidc/opaque-token-call-count").then().body(equalTo("0"));
     }
 
     @Test
@@ -895,6 +911,15 @@ public class BearerTokenAuthorizationTest {
         String json = RestAssured
                 .when()
                 .post("/oidc/opaque-token")
+                .body().asString();
+        JsonObject object = new JsonObject(json);
+        return object.getString("access_token");
+    }
+
+    private String getOpaqueAccessToken2FromSimpleOidc() {
+        String json = RestAssured
+                .when()
+                .post("/oidc/opaque-token2")
                 .body().asString();
         JsonObject object = new JsonObject(json);
         return object.getString("access_token");
