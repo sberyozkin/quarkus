@@ -1177,6 +1177,11 @@ public class OidcTenantConfig extends OidcClientCommonConfig {
         public Optional<Boolean> userInfoRequired = Optional.empty();
 
         /**
+         * Authorization scheme for requesting UserInfo.
+         */
+        public String userInfoScheme = OidcConstants.BEARER_SCHEME;
+
+        /**
          * Session age extension in minutes.
          * The user session age property is set to the value of the ID token life-span by default and
          * the user is redirected to the OIDC provider to re-authenticate once the session has expired.
@@ -2032,6 +2037,7 @@ public class OidcTenantConfig extends OidcClientCommonConfig {
         MASTODON,
         MICROSOFT,
         SLACK,
+        SNYK,
         SPOTIFY,
         STRAVA,
         TWITCH,

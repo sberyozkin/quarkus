@@ -33,7 +33,7 @@ import io.vertx.core.Vertx;
 @Priority(Priorities.AUTHENTICATION)
 public class AccessTokenRequestReactiveFilter implements ResteasyReactiveClientRequestFilter {
     private static final Logger LOG = Logger.getLogger(AccessTokenRequestReactiveFilter.class);
-    private static final String BEARER_SCHEME_WITH_SPACE = "Bearer ";
+    private static final String BEARER_SCHEME = "Bearer";
     private static final String ERROR_MSG = "OIDC Token Propagation Reactive requires a safe (isolated) Vert.x sub-context because configuration property 'quarkus.rest-client-oidc-token-propagation.enabled-during-authentication' has been set to true, but the current context hasn't been flagged as such.";
     private final boolean enabledDuringAuthentication;
     private final Instance<TokenCredential> accessToken;
@@ -118,11 +118,15 @@ public class AccessTokenRequestReactiveFilter implements ResteasyReactiveClientR
 
     public void propagateToken(ResteasyReactiveClientRequestContext requestContext, String accessToken) {
         if (accessToken != null) {
-            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, BEARER_SCHEME_WITH_SPACE + accessToken);
+            requestContext.getHeaders().putSingle(HttpHeaders.AUTHORIZATION, getAuthorizationScheme() + " " + accessToken);
         } else {
             LOG.debugf("Access token is null, aborting the request with HTTP 401 error");
             abortRequest(requestContext);
         }
+    }
+
+    protected String getAuthorizationScheme() {
+        return BEARER_SCHEME;
     }
 
     protected boolean verifyTokenInstance(ResteasyReactiveClientRequestContext requestContext) {

@@ -133,7 +133,8 @@ public class OidcProviderClient implements Closeable {
     }
 
     private Uni<UserInfoResponse> doGetUserInfo(OidcRequestContextProperties requestProps, String token, List<String> cookies) {
-        LOG.debugf("Get UserInfo on: %s auth: %s", metadata.getUserInfoUri(), OidcConstants.BEARER_SCHEME + " " + token);
+        LOG.debugf("Get UserInfo on: %s auth: %s", metadata.getUserInfoUri(),
+                oidcConfig.authentication.userInfoScheme + " " + token);
 
         HttpRequest<Buffer> request = client.getAbs(metadata.getUserInfoUri());
         if (!cookies.isEmpty()) {
@@ -142,7 +143,7 @@ public class OidcProviderClient implements Closeable {
         return OidcCommonUtils
                 .sendRequest(vertx,
                         filterHttpRequest(requestProps, OidcEndpoint.Type.USERINFO, request, null)
-                                .putHeader(AUTHORIZATION_HEADER, OidcConstants.BEARER_SCHEME + " " + token),
+                                .putHeader(AUTHORIZATION_HEADER, oidcConfig.authentication.userInfoScheme + " " + token),
                         oidcConfig.useBlockingDnsLookup)
                 .onItem().transform(resp -> getUserInfo(requestProps, resp));
     }

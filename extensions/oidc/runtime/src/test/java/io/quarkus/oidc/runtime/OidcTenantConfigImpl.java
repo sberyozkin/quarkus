@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import io.quarkus.oidc.common.runtime.OidcConstants;
 import io.quarkus.runtime.configuration.TrimmedStringConverter;
 import io.smallrye.config.WithConverter;
 
@@ -143,6 +144,7 @@ final class OidcTenantConfigImpl implements OidcTenantConfig {
         AUTHENTICATION_ALLOW_MULTIPLE_CODE_FLOWS,
         AUTHENTICATION_FAIL_ON_MISSING_STATE_PARAM,
         AUTHENTICATION_USER_INFO_REQUIRED,
+        AUTHENTICATION_USER_INFO_SCHEME,
         AUTHENTICATION_SESSION_AGE_EXTENSION,
         AUTHENTICATION_STATE_COOKIE_AGE,
         AUTHENTICATION_JAVASCRIPT_AUTO_REDIRECT,
@@ -689,6 +691,12 @@ final class OidcTenantConfigImpl implements OidcTenantConfig {
             public boolean failOnMissingStateParam() {
                 invocationsRecorder.put(ConfigMappingMethods.AUTHENTICATION_FAIL_ON_MISSING_STATE_PARAM, true);
                 return false;
+            }
+
+            @Override
+            public String userInfoScheme() {
+                invocationsRecorder.put(ConfigMappingMethods.AUTHENTICATION_USER_INFO_SCHEME, true);
+                return OidcConstants.BEARER_SCHEME;
             }
 
             @Override

@@ -771,6 +771,12 @@ public interface OidcTenantConfig extends OidcClientCommonConfig {
         Optional<Boolean> userInfoRequired();
 
         /**
+         * Authorization scheme for requesting UserInfo.
+         */
+        @WithDefault(OidcConstants.BEARER_SCHEME)
+        String userInfoScheme();
+
+        /**
          * Session age extension in minutes.
          * The user session age property is set to the value of the ID token life-span by default and
          * the user is redirected to the OIDC provider to re-authenticate once the session has expired.

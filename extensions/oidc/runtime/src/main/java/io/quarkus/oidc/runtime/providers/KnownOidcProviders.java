@@ -20,6 +20,7 @@ public class KnownOidcProviders {
             case MASTODON -> mastodon();
             case MICROSOFT -> microsoft();
             case SLACK -> slack();
+            case SNYK -> snyk();
             case SPOTIFY -> spotify();
             case STRAVA -> strava();
             case TWITCH -> twitch();
@@ -213,6 +214,21 @@ public class KnownOidcProviders {
         ret.getToken().setVerifyAccessTokenWithUserInfo(true);
         ret.setUserInfoPath("https://discord.com/api/users/@me");
 
+        return ret;
+    }
+
+    private static OidcTenantConfig snyk() {
+        OidcTenantConfig ret = new OidcTenantConfig();
+        ret.setAuthServerUrl("https://app.snyk.io/oauth2");
+        ret.setApplicationType(OidcTenantConfig.ApplicationType.WEB_APP);
+        ret.setDiscoveryEnabled(false);
+        ret.setAuthorizationPath("authorize");
+        ret.setTokenPath("token");
+        ret.getAuthentication().setScopes(List.of("org.read"));
+        ret.getAuthentication().setIdTokenRequired(false);
+        ret.getAuthentication().userInfoScheme = "token";
+        ret.getToken().setVerifyAccessTokenWithUserInfo(true);
+        ret.setUserInfoPath("https://api.snyk.io/rest/self");
         return ret;
     }
 }
