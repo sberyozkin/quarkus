@@ -352,7 +352,7 @@ public class CodeFlowTest {
                     "AES");
             String decryptedSessionCookieValue = OidcUtils.decryptString(sessionCookie.getValue(), key);
 
-            String encodedIdToken = decryptedSessionCookieValue.split("\\|")[0];
+            String encodedIdToken = new JsonObject(decryptedSessionCookieValue).getString("id");
 
             JsonObject idToken = OidcCommonUtils.decodeJwtContent(encodedIdToken);
             String expiresAt = idToken.getInteger("exp").toString();
@@ -1208,13 +1208,11 @@ public class CodeFlowTest {
                     .getSha256Digest("secret".getBytes(StandardCharsets.UTF_8)),
                     "AES");
 
-            String sessionCookieValue = OidcUtils.decryptString(sessionCookie.getValue(), key);
+            JsonObject json = new JsonObject(OidcUtils.decryptString(sessionCookie.getValue(), key));
 
-            String[] parts = sessionCookieValue.split("\\|");
-            assertEquals(3, parts.length);
-            assertEquals("ID", OidcCommonUtils.decodeJwtContent(parts[0]).getString("typ"));
-            assertEquals("", parts[1]);
-            assertEquals("Refresh", OidcCommonUtils.decodeJwtContent(parts[2]).getString("typ"));
+            assertEquals("ID", OidcCommonUtils.decodeJwtContent(json.getString("id")).getString("typ"));
+            assertNull(json.getString("at"));
+            assertEquals("Refresh", OidcCommonUtils.decodeJwtContent(json.getString("rt")).getString("typ"));
 
             assertNull(getSessionAtCookie(webClient, "tenant-id-refresh-token"));
             assertNull(getSessionRtCookie(webClient, "tenant-id-refresh-token"));
@@ -1348,7 +1346,8 @@ public class CodeFlowTest {
                 SecretKey key = new SecretKeySpec(OidcUtils
                         .getSha256Digest(decryptSecret.getBytes(StandardCharsets.UTF_8)),
                         "AES");
-                token = OidcUtils.decryptString(token, key);
+                String propName = type.equals("ID") ? "id" : type.equals("Bearer") ? "at" : "rt";
+                token = new JsonObject(OidcUtils.decryptString(token, key)).getString(propName);
                 tokenParts = token.split("\\.");
             } catch (Exception ex) {
                 fail("Token decryption has failed");

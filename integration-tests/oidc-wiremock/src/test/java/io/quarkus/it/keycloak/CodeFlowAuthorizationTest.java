@@ -593,7 +593,7 @@ public class CodeFlowAuthorizationTest {
 
         String decryptedSessionCookie = OidcUtils.decryptString(sessionCookie.getValue(), key);
 
-        String encodedIdToken = decryptedSessionCookie.split("\\|")[0];
+        String encodedIdToken = new JsonObject(decryptedSessionCookie).getString("id");
 
         return OidcCommonUtils.decodeJwtContent(encodedIdToken);
     }
