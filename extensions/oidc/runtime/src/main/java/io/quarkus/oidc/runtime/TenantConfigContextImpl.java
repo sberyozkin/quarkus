@@ -298,4 +298,9 @@ final class TenantConfigContextImpl implements TenantConfigContext {
             return combined;
         }
     }
+
+    @Override
+    public Map<Redirect.Location, List<OidcRedirectFilter>> getLocationToRedirectFilters() {
+        return redirectFilters;
+    }
 }
