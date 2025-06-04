@@ -356,6 +356,8 @@ public class CodeFlowAuthorizationTest {
         // Internal ID token, allow in memory cache = false, cacheUserInfoInIdtoken = false
         doTestCodeFlowUserInfo("code-flow-user-info-github-cache-disabled", 25200, false, false, 0, 4);
         clearCache();
+        doTestCodeFlowUserInfoDynamicGithubUpdate();
+        clearCache();
     }
 
     @Test
@@ -617,6 +619,27 @@ public class CodeFlowAuthorizationTest {
 
             webClient.getCookieManager().clearCookies();
             wireMockServer.resetRequests();
+        }
+    }
+
+    private void doTestCodeFlowUserInfoDynamicGithubUpdate() throws Exception {
+        try (final WebClient webClient = createWebClient()) {
+            HtmlPage page = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github");
+
+            HtmlForm form = page.getFormByName("form");
+            form.getInputByName("username").type("alice");
+            form.getInputByName("password").type("alice");
+
+            TextPage textPage = form.getInputByValue("login").click();
+            assertEquals("alice:alice:alice, cache size: 0, TenantConfigResolver: true", textPage.getContent());
+
+            textPage = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github");
+            assertEquals("alice:alice:alice, cache size: 0, TenantConfigResolver: true", textPage.getContent());
+
+            textPage = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github?update=true");
+            assertEquals("alice@somecompany.com:alice:alice, cache size: 0, TenantConfigResolver: true", textPage.getContent());
+
+            webClient.getCookieManager().clearCookies();
         }
     }
 

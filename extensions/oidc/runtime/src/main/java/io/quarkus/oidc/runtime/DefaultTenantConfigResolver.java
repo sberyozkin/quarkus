@@ -37,6 +37,7 @@ public class DefaultTenantConfigResolver {
     private static final String CURRENT_STATIC_TENANT_ID = "static.tenant.id";
     private static final String CURRENT_STATIC_TENANT_ID_NULL = "static.tenant.id.null";
     private static final String CURRENT_DYNAMIC_TENANT_CONFIG = "dynamic.tenant.config";
+    private static final String REPLACE_TENANT_CONFIG_CONTEXT = "replace-tenant-configuration-context";
     private final ConcurrentHashMap<String, BackChannelLogoutTokenCache> backChannelLogoutTokens = new ConcurrentHashMap<>();
     private final BlockingTaskRunner<OidcTenantConfig> blockingRequestContext;
     private final boolean securityEventObserved;
@@ -266,6 +267,12 @@ public class DefaultTenantConfigResolver {
                     var tenantContext = tenantConfigBean.getDynamicTenant(tenantId);
                     if (tenantContext == null) {
                         return tenantConfigBean.createDynamicTenantContext(tenantConfig);
+                    } else if (tenantContext.getOidcTenantConfig() != tenantConfig) {
+                        if (Boolean.valueOf(context.get(REPLACE_TENANT_CONFIG_CONTEXT))) {
+                            return tenantConfigBean.replaceDynamicTenantContext(tenantConfig);
+                        } else {
+                            return tenantConfigBean.updateDynamicTenantContext(tenantConfig);
+                        }
                     } else {
                         return Uni.createFrom().item(tenantContext);
                     }

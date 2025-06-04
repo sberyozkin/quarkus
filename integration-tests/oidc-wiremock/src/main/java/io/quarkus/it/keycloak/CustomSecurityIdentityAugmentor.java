@@ -4,9 +4,11 @@ import java.security.Principal;
 import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import io.quarkus.arc.Arc;
 import io.quarkus.oidc.UserInfo;
+import io.quarkus.oidc.runtime.TenantConfigBean;
 import io.quarkus.security.identity.AuthenticationRequestContext;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.SecurityIdentityAugmentor;
@@ -18,6 +20,9 @@ import io.vertx.ext.web.RoutingContext;
 
 @ApplicationScoped
 public class CustomSecurityIdentityAugmentor implements SecurityIdentityAugmentor {
+
+    @Inject
+    TenantConfigBean tenantConfigBean;
 
     @Override
     public Uni<SecurityIdentity> augment(SecurityIdentity identity, AuthenticationRequestContext context,
@@ -47,13 +52,19 @@ public class CustomSecurityIdentityAugmentor implements SecurityIdentityAugmento
                         || routingContext.normalizedPath().endsWith("code-flow-token-introspection")
                         || routingContext.normalizedPath().endsWith("code-flow-user-info-github-cached-in-idtoken")
                         || routingContext.normalizedPath().endsWith("code-flow-user-info-github-cache-disabled"))) {
+
+            boolean dynamicTenant = routingContext.normalizedPath().endsWith("code-flow-user-info-dynamic-github");
+            String principalName = !dynamicTenant ? "preferred_username"
+                    : tenantConfigBean.getDynamicTenant("code-flow-user-info-dynamic-github").getOidcTenantConfig().token()
+                            .principalClaim().get();
+
             QuarkusSecurityIdentity.Builder builder = QuarkusSecurityIdentity.builder(identity);
             UserInfo userInfo = identity.getAttribute("userinfo");
             builder.setPrincipal(new Principal() {
 
                 @Override
                 public String getName() {
-                    return userInfo.getString("preferred_username");
+                    return userInfo.getString(principalName);
                 }
 
             });

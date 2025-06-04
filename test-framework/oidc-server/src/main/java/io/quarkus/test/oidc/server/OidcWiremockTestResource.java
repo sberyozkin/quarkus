@@ -250,7 +250,9 @@ public class OidcWiremockTestResource implements QuarkusTestResourceLifecycleMan
                         .willReturn(aResponse()
                                 .withHeader("Content-Type", "application/json")
                                 .withBody("{\n" +
-                                        "      \"preferred_username\": \"" + user + "\""
+                                        "      \"preferred_username\": \"" + user + "\","
+                                        + "      \"name\": \"" + user + "\","
+                                        + "      \"email\": \"" + user + "@somecompany.com" + "\""
                                         + "}")));
     }
 
@@ -261,7 +263,9 @@ public class OidcWiremockTestResource implements QuarkusTestResourceLifecycleMan
                         .willReturn(aResponse()
                                 .withHeader("Content-Type", "application/json")
                                 .withBody("{\n" +
-                                        "      \"preferred_username\": \"alice\""
+                                        "      \"preferred_username\": \"alice\","
+                                        + "      \"name\": \"alice\","
+                                        + "      \"email\": \"alice@somecompany.com\""
                                         + "}")));
     }
 
