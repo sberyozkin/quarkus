@@ -6,43 +6,28 @@ import java.util.List;
 import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.quarkus.oidc.OidcRequestContext;
 import io.quarkus.oidc.OidcTenantConfig;
 import io.quarkus.oidc.OidcTenantConfig.Provider;
-import io.quarkus.oidc.OidcTenantConfigBuilder;
 import io.quarkus.oidc.TenantConfigResolver;
 import io.quarkus.oidc.runtime.OidcUtils;
+import io.quarkus.oidc.runtime.TenantConfigBean;
 import io.smallrye.mutiny.Uni;
 import io.vertx.ext.web.RoutingContext;
 
 @ApplicationScoped
 public class CustomTenantConfigResolver implements TenantConfigResolver {
 
+    @Inject
+    @ConfigProperty(name = "keycloak.url")
     String keycloakUrl;
 
-    OidcTenantConfig gitHubDynamicConfig;
-
-    public CustomTenantConfigResolver(@ConfigProperty(name = "keycloak.url") String keycloakUrl) {
-        this.keycloakUrl = keycloakUrl;
-        gitHubDynamicConfig = new OidcTenantConfig();
-        gitHubDynamicConfig.setTenantId("code-flow-user-info-dynamic-github");
-
-        gitHubDynamicConfig.setProvider(Provider.GITHUB);
-
-        gitHubDynamicConfig.setAuthServerUrl(keycloakUrl + "/realms/quarkus/");
-        gitHubDynamicConfig.setAuthorizationPath("/");
-        gitHubDynamicConfig.setUserInfoPath("protocol/openid-connect/userinfo");
-        gitHubDynamicConfig.setClientId("quarkus-web-app");
-        gitHubDynamicConfig.getCredentials()
-                .setSecret("AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow");
-        gitHubDynamicConfig.getCodeGrant().setHeaders(Map.of("X-Custom", "XCustomHeaderValue"));
-        gitHubDynamicConfig.getCodeGrant().setExtraParams(Map.of("extra-param", "extra-param-value"));
-        gitHubDynamicConfig.getAuthentication().setInternalIdTokenLifespan(Duration.ofSeconds(301));
-        gitHubDynamicConfig.setAllowUserInfoCache(false);
-    }
+    @Inject
+    TenantConfigBean tenantConfigBean;
 
     @Override
     public Uni<OidcTenantConfig> resolve(RoutingContext context,
@@ -67,18 +52,62 @@ public class CustomTenantConfigResolver implements TenantConfigResolver {
             // Expect an already resolved tenant context be used
             if (path.endsWith("code-flow-user-info-dynamic-github")) {
                 context.put("tenant-config-resolver", "true");
+
                 List<String> update = context.queryParam("update");
                 if (update != null && !update.isEmpty() && "true".equals(update.get(0))) {
-                    OidcTenantConfig updatedConfig = OidcTenantConfigBuilder.builder(gitHubDynamicConfig)
-                            .token().principalClaim("email").end()
-                            .build();
-                    return Uni.createFrom().item(updatedConfig);
+                    var currentTenantConfig = tenantConfigBean.getDynamicTenant("code-flow-user-info-dynamic-github")
+                            .getOidcTenantConfig();
+                    if ("name".equals(currentTenantConfig.token().principalClaim().get())) {
+                        // This is the original config
+                        OidcTenantConfig updatedConfig = OidcTenantConfig.builder(currentTenantConfig)
+                                .token().principalClaim("email").end()
+                                .build();
+                        return Uni.createFrom().item(updatedConfig);
+                    }
+                }
+
+                List<String> reconnect = context.queryParam("reconnect");
+                if (reconnect != null && !reconnect.isEmpty() && "true".equals(reconnect.get(0))) {
+
+                    var currentTenantConfig = tenantConfigBean.getDynamicTenant("code-flow-user-info-dynamic-github")
+                            .getOidcTenantConfig();
+                    if ("email".equals(currentTenantConfig.token().principalClaim().get())) {
+                        // This is the config created at the update step
+                        OidcTenantConfig updatedConfig = OidcTenantConfig.builder(currentTenantConfig)
+                                .authServerUrl(keycloakUrl + "/realms/github/")
+                                .provider(null)
+                                .discoveryEnabled(true)
+                                .authorizationPath(null)
+                                .userInfoPath(null)
+                                .tokenPath(null)
+                                .token().principalClaim("personal-email").end()
+                                .build();
+
+                        context.put("replace-tenant-configuration-context", "true");
+                        context.put("remove-session-cookie", "true");
+                        return Uni.createFrom().item(updatedConfig);
+                    }
                 }
             }
             return null;
         }
         if (path.endsWith("code-flow-user-info-dynamic-github")) {
-            return Uni.createFrom().item(gitHubDynamicConfig);
+            OidcTenantConfig config = new OidcTenantConfig();
+            config.setTenantId("code-flow-user-info-dynamic-github");
+
+            config.setProvider(Provider.GITHUB);
+
+            config.setAuthServerUrl(keycloakUrl + "/realms/quarkus/");
+            config.setAuthorizationPath("/");
+            config.setUserInfoPath("protocol/openid-connect/userinfo");
+            config.setClientId("quarkus-web-app");
+            config.getCredentials()
+                    .setSecret("AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow");
+            config.getCodeGrant().setHeaders(Map.of("X-Custom", "XCustomHeaderValue"));
+            config.getCodeGrant().setExtraParams(Map.of("extra-param", "extra-param-value"));
+            config.getAuthentication().setInternalIdTokenLifespan(Duration.ofSeconds(301));
+            config.setAllowUserInfoCache(false);
+            return Uni.createFrom().item(config);
         } else if (path.endsWith("bearer-certificate-full-chain-root-only")) {
             OidcTenantConfig config = new OidcTenantConfig();
             config.setTenantId("bearer-certificate-full-chain-root-only");

@@ -624,13 +624,13 @@ public class CodeFlowAuthorizationTest {
 
     private void doTestCodeFlowUserInfoDynamicGithubUpdate() throws Exception {
         try (final WebClient webClient = createWebClient()) {
-            HtmlPage page = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github");
+            HtmlPage htmlPage = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github");
 
-            HtmlForm form = page.getFormByName("form");
-            form.getInputByName("username").type("alice");
-            form.getInputByName("password").type("alice");
+            HtmlForm htmlForm = htmlPage.getFormByName("form");
+            htmlForm.getInputByName("username").type("alice");
+            htmlForm.getInputByName("password").type("alice");
 
-            TextPage textPage = form.getInputByValue("login").click();
+            TextPage textPage = htmlForm.getInputByValue("login").click();
             assertEquals("alice:alice:alice, cache size: 0, TenantConfigResolver: true", textPage.getContent());
 
             textPage = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github");
@@ -638,6 +638,15 @@ public class CodeFlowAuthorizationTest {
 
             textPage = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github?update=true");
             assertEquals("alice@somecompany.com:alice:alice, cache size: 0, TenantConfigResolver: true", textPage.getContent());
+
+            htmlPage = webClient.getPage("http://localhost:8081/code-flow-user-info-dynamic-github?reconnect=true");
+            htmlForm = htmlPage.getFormByName("form");
+            htmlForm.getInputByName("username").type("alice");
+            htmlForm.getInputByName("password").type("alice");
+
+            textPage = htmlForm.getInputByValue("login").click();
+            assertEquals("alice@anothercompany.com:alice:alice, cache size: 0, TenantConfigResolver: true",
+                    textPage.getContent());
 
             webClient.getCookieManager().clearCookies();
         }
@@ -729,6 +738,30 @@ public class CodeFlowAuthorizationTest {
                                 .withBody("{\n" +
                                         "  \"access_token\": \""
                                         + OidcWiremockTestResource.getAccessToken("bob", Set.of()) + "\""
+                                        + "}")));
+
+        wireMockServer.stubFor(
+                get(urlEqualTo("/auth/realms/github/.well-known/openid-configuration"))
+                        .willReturn(aResponse()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\n" +
+                                        "    \"authorization_endpoint\": \"" + wireMockServer.baseUrl()
+                                        + "/auth/realms/quarkus\"," +
+                                        "    \"jwks_uri\": \"" + wireMockServer.baseUrl()
+                                        + "/auth/realms/quarkus/protocol/openid-connect/certs\",\n" +
+                                        "    \"token_endpoint\": \"" + wireMockServer.baseUrl()
+                                        + "/auth/realms/quarkus/token\"," +
+                                        "    \"userinfo_endpoint\": \"" + wireMockServer.baseUrl()
+                                        + "/auth/realms/github/protocol/openid-connect/userinfo\""
+                                        + "}")));
+        wireMockServer.stubFor(
+                get(urlEqualTo("/auth/realms/github/protocol/openid-connect/userinfo"))
+                        .withHeader("Authorization", containing("Bearer ey"))
+                        .willReturn(aResponse()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\n"
+                                        + "\"preferred_username\": \"alice\","
+                                        + "\"personal-email\": \"alice@anothercompany.com\""
                                         + "}")));
 
     }

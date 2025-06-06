@@ -270,24 +270,6 @@ public final class OidcTenantConfigBuilder extends OidcClientCommonConfigBuilder
         }
     }
 
-    /**
-     * Creates a new builder populated with documented default values.
-     *
-     * @return OidcTenantConfigBuilder builder
-     */
-    public static OidcTenantConfigBuilder builder() {
-        return new OidcTenantConfigBuilder();
-    }
-
-    /**
-     * Creates {@link OidcTenantConfigBuilder} builder from the existing {@link OidcTenantConfig}
-     *
-     * @param mapping OidcTenantConfig
-     */
-    public static OidcTenantConfigBuilder builder(OidcTenantConfig mapping) {
-        return new OidcTenantConfigBuilder(mapping);
-    }
-
     @Override
     protected OidcTenantConfigBuilder getBuilder() {
         return this;

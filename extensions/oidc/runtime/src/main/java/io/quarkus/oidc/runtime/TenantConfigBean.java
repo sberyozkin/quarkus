@@ -57,7 +57,7 @@ public final class TenantConfigBean {
         var tenant = dynamicTenantsConfig.get(tenantId);
         if (tenant != null) {
             LOG.debugf("Updating the resolved tenant %s configuration with a new configuration", tenantId);
-            var newTenant = new TenantConfigContextImpl(tenant.provider(), oidcConfig);
+            var newTenant = new TenantConfigContextImpl(tenant, oidcConfig);
             dynamicTenantsConfig.put(tenantId, newTenant);
             return Uni.createFrom().item(newTenant);
         } else {
