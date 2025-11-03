@@ -41,7 +41,15 @@ public class BearerAuthenticationMechanism extends AbstractOidcAuthenticationMec
             } catch (AuthenticationFailedException ex) {
                 return Uni.createFrom().failure(ex);
             }
-            return authenticate(identityProviderManager, context, new AccessTokenCredential(token));
+            Uni<TenantConfigContext> resolvedContext = resolver.resolveContext(context);
+            return resolvedContext.onItem()
+                    .transformToUni(new Function<TenantConfigContext, Uni<? extends SecurityIdentity>>() {
+                        @Override
+                        public Uni<SecurityIdentity> apply(TenantConfigContext tenantContext) {
+                            context.put(TenantConfigContext.class.getName(), tenantContext);
+                            return authenticate(identityProviderManager, context, new AccessTokenCredential(token));
+                        }
+                    });
         }
         LOG.debug("Bearer access token is not available");
         return Uni.createFrom().nullItem();

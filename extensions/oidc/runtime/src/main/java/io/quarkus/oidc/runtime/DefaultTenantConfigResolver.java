@@ -1,5 +1,7 @@
 package io.quarkus.oidc.runtime;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -8,12 +10,14 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.Instance.Handle;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import io.quarkus.oidc.AuthenticationCompletionAction;
 import io.quarkus.oidc.JavaScriptRequestChecker;
 import io.quarkus.oidc.OIDCException;
 import io.quarkus.oidc.OidcTenantConfig;
@@ -53,6 +57,9 @@ public class DefaultTenantConfigResolver {
 
     @Inject
     Instance<JavaScriptRequestChecker> javaScriptRequestChecker;
+
+    @Inject
+    Instance<AuthenticationCompletionAction> authorizationCodeFlowCompletionAction;
 
     @Inject
     Instance<TokenStateManager> tokenStateManager;
@@ -333,6 +340,18 @@ public class DefaultTenantConfigResolver {
 
     public JavaScriptRequestChecker getJavaScriptRequestChecker() {
         return javaScriptRequestChecker.isResolvable() ? javaScriptRequestChecker.get() : null;
+    }
+
+    public List<AuthenticationCompletionAction> authorizationCodeFlowCompletionActions() {
+        if (authorizationCodeFlowCompletionAction.isResolvable()) {
+            List<AuthenticationCompletionAction> actions = new ArrayList<>();
+            for (Handle<AuthenticationCompletionAction> h : authorizationCodeFlowCompletionAction.handles()) {
+                actions.add(h.get());
+            }
+            return actions;
+        } else {
+            return List.of();
+        }
     }
 
     public OidcTenantConfig getResolvedConfig(String sessionTenantId) {

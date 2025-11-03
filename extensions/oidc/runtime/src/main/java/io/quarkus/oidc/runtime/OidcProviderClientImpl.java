@@ -573,6 +573,7 @@ public class OidcProviderClientImpl implements OidcProviderClient, Closeable {
         return vertx;
     }
 
+    @Override
     public WebClient getWebClient() {
         return client;
     }

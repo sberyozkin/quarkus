@@ -1,0 +1,14 @@
+---
+artifact: ${project.groupId}:${project.artifactId}:${project.version}
+name: "OIDC Verifiable Credentials"
+metadata:
+  keywords:
+  - "openid-connect"
+  - "verifiable"
+  - "credentials"
+  categories:
+    - "security"
+  status: "experimental"
+  config:
+  - "quarkus.oidc."
+  - "quarkus.oidcvc."

@@ -73,6 +73,7 @@ import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
 import io.quarkus.deployment.builditem.RunTimeConfigurationDefaultBuildItem;
 import io.quarkus.deployment.builditem.RuntimeConfigSetupCompleteBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
+import io.quarkus.oidc.AuthenticationCompletionAction;
 import io.quarkus.oidc.AuthenticationContext;
 import io.quarkus.oidc.AuthorizationCodeFlow;
 import io.quarkus.oidc.BearerTokenAuthentication;
@@ -219,7 +220,8 @@ public class OidcBuildStep {
                 .addBeanClass(OidcSessionImpl.class)
                 .addBeanClass(BackChannelLogoutHandler.class)
                 .addBeanClass(ResourceMetadataHandler.class)
-                .addBeanClass(AzureAccessTokenCustomizer.class);
+                .addBeanClass(AzureAccessTokenCustomizer.class)
+                .addBeanClass(AuthenticationCompletionAction.class);
         additionalBeans.produce(builder.build());
     }
 

@@ -1,6 +1,7 @@
 package io.quarkus.oidc;
 
 import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.ext.web.client.WebClient;
 
 /**
  * Provides access to OIDC UserInfo, token introspection and revocation endpoints.
@@ -41,4 +42,10 @@ public interface OidcProviderClient {
      */
     Uni<Boolean> revokeRefreshToken(String refreshToken);
 
+    /**
+     * Get WebClient to perform additional calls.
+     *
+     * @return WebClient.
+     */
+    WebClient getWebClient();
 }

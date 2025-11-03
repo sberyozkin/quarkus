@@ -27,6 +27,7 @@ import io.quarkus.oidc.OIDCException;
 import io.quarkus.oidc.OidcTenantConfig;
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.smallrye.jwt.build.Jwt;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.Cookie;
 import io.vertx.core.http.impl.CookieImpl;
 import io.vertx.core.json.JsonObject;
@@ -34,7 +35,32 @@ import io.vertx.core.json.JsonObject;
 public class OidcUtilsTest {
 
     @Test
-    public void getRoorPath() throws Exception {
+    public void addNewQueryParams() throws Exception {
+
+        MultiMap map = MultiMap.caseInsensitiveMultiMap();
+        map.add("a", "b");
+        map.add("c", "d");
+
+        assertEquals("http://localhost:8080?a=b&c=d", OidcUtils.addQueryParamsToUri("http://localhost:8080", map));
+        assertEquals("http://localhost:8080?scope=openid&a=b&c=d",
+                OidcUtils.addQueryParamsToUri("http://localhost:8080?scope=openid", map));
+    }
+
+    @Test
+    public void updateScopeQueryParam() throws Exception {
+
+        MultiMap map = MultiMap.caseInsensitiveMultiMap();
+        map.add("scope", "newscope");
+
+        assertEquals("http://localhost:8080?scope=newscope", OidcUtils.addQueryParamsToUri("http://localhost:8080", map));
+        assertEquals("http://localhost:8080?scope=openid%20newscope&a=b&c=d",
+                OidcUtils.addQueryParamsToUri("http://localhost:8080?scope=openid&a=b&c=d", map));
+        assertEquals("http://localhost:8080?a=b&c=d&scope=openid%20newscope",
+                OidcUtils.addQueryParamsToUri("http://localhost:8080?a=b&c=d&scope=openid", map));
+    }
+
+    @Test
+    public void getRootPath() throws Exception {
 
         assertEquals("", OidcUtils.getRootPath("/"));
         assertEquals("/root", OidcUtils.getRootPath("/root"));

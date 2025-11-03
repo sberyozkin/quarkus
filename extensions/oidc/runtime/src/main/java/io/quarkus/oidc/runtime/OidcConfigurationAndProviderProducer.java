@@ -19,14 +19,18 @@ public class OidcConfigurationAndProviderProducer {
     @Produces
     @RequestScoped
     OidcConfigurationMetadata produceMetadata() {
-        OidcConfigurationMetadata configMetadata = OidcUtils.getAttribute(identity, OidcUtils.CONFIG_METADATA_ATTRIBUTE);
+        OidcConfigurationMetadata configMetadata = null;
 
-        if (configMetadata == null && tenantConfig.getDefaultTenant().oidcConfig().tenantEnabled()) {
+        if (!identity.isAnonymous()) {
+            configMetadata = OidcUtils.getAttribute(identity, OidcUtils.CONFIG_METADATA_ATTRIBUTE);
+        } else if (tenantConfig.getDefaultTenant().oidcConfig().tenantEnabled()) {
             configMetadata = tenantConfig.getDefaultTenant().provider().getMetadata();
         }
+
         if (configMetadata == null) {
             throw new OIDCException("OidcConfigurationMetadata can not be injected");
         }
+
         return configMetadata;
     }
 
@@ -34,18 +38,24 @@ public class OidcConfigurationAndProviderProducer {
     @RequestScoped
     OidcProviderClient produceProviderClient() {
         OidcProviderClient client = null;
-        String tenantId = OidcUtils.getAttribute(identity, OidcUtils.TENANT_ID_ATTRIBUTE);
-        if (tenantId != null) {
-            if (OidcUtils.DEFAULT_TENANT_ID.equals(tenantId)) {
-                return tenantConfig.getDefaultTenant().getOidcProviderClient();
+
+        if (!identity.isAnonymous()) {
+            String tenantId = OidcUtils.getAttribute(identity, OidcUtils.TENANT_ID_ATTRIBUTE);
+            if (tenantId != null) {
+                if (OidcUtils.DEFAULT_TENANT_ID.equals(tenantId)) {
+                    client = tenantConfig.getDefaultTenant().getOidcProviderClient();
+                } else {
+                    TenantConfigContext context = tenantConfig.getStaticTenant(tenantId);
+                    if (context == null) {
+                        context = tenantConfig.getDynamicTenant(tenantId);
+                    }
+                    if (context != null) {
+                        client = context.getOidcProviderClient();
+                    }
+                }
             }
-            TenantConfigContext context = tenantConfig.getStaticTenant(tenantId);
-            if (context == null) {
-                context = tenantConfig.getDynamicTenant(tenantId);
-            }
-            if (context != null) {
-                client = context.getOidcProviderClient();
-            }
+        } else if (tenantConfig.getDefaultTenant().oidcConfig().tenantEnabled()) {
+            client = tenantConfig.getDefaultTenant().getOidcProviderClient();
         }
         if (client == null) {
             throw new OIDCException("OidcProviderClient can not be injected");

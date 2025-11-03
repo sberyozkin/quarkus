@@ -11,4 +11,12 @@ public class TokenVerificationResult {
         this.localVerificationResult = localVerificationResult;
         this.introspectionResult = introspectionResult;
     }
+
+    public JsonObject localVerificationResult() {
+        return localVerificationResult;
+    }
+
+    public TokenIntrospection tokenIntrospectionResult() {
+        return introspectionResult;
+    }
 }

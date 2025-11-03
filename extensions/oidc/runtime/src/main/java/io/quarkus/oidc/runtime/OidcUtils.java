@@ -466,7 +466,7 @@ public final class OidcUtils {
         }
     }
 
-    static Uni<Void> removeSessionCookie(RoutingContext context, OidcTenantConfig oidcConfig,
+    public static Uni<Void> removeSessionCookie(RoutingContext context, OidcTenantConfig oidcConfig,
             TokenStateManager tokenStateManager) {
         List<String> cookieNames = context.get(SESSION_COOKIE_NAME);
         if (cookieNames != null) {
@@ -1086,5 +1086,32 @@ public final class OidcUtils {
         newTokens.setAccessTokenScope(tokens.getAccessTokenScope());
         newTokens.setAccessTokenExpiresIn(tokens.getAccessTokenExpiresIn());
         return newTokens;
+    }
+
+    public static String addQueryParamsToUri(String uri, MultiMap additionalQueryParams) {
+        for (Map.Entry<String, String> entry : additionalQueryParams.entries()) {
+            if (OidcConstants.TOKEN_SCOPE.equals(entry.getKey())) {
+                // if it is a scope query parameter, it must be updated
+                final String queryParam = entry.getKey() + "=";
+                int queryParamStart = uri.indexOf(queryParam);
+                if (queryParamStart > 0) {
+                    int queryParamEnd = uri.indexOf("&", queryParamStart + queryParam.length());
+                    String completeQueryParam = queryParamEnd > 0 ? uri.substring(queryParamStart, queryParamEnd)
+                            : uri.substring(queryParamStart);
+                    completeQueryParam += ("%20" + OidcCommonUtils.urlEncode(entry.getValue()));
+
+                    String newUri = uri.substring(0, queryParamStart) + completeQueryParam;
+                    if (queryParamEnd > 0) {
+                        newUri += "&" + uri.substring(queryParamEnd + 1);
+                    }
+                    uri = newUri;
+                    continue;
+                }
+            }
+            String completeQueryParam = entry.getKey() + "=" + OidcCommonUtils.urlEncode(entry.getValue());
+            String sep = uri.lastIndexOf("?") > 0 ? "&" : "?";
+            uri += (sep + completeQueryParam);
+        }
+        return uri;
     }
 }

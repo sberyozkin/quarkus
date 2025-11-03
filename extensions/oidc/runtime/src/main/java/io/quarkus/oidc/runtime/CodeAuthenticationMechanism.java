@@ -27,6 +27,8 @@ import org.jose4j.jwt.consumer.InvalidJwtException;
 import org.jose4j.lang.UnresolvableKeyException;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.quarkus.oidc.AuthenticationCompletionAction;
+import io.quarkus.oidc.AuthenticationCompletionAction.AuthenticationCompletionContext;
 import io.quarkus.oidc.AuthorizationCodeTokens;
 import io.quarkus.oidc.IdTokenCredential;
 import io.quarkus.oidc.JavaScriptRequestChecker;
@@ -80,11 +82,13 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
 
     private final BlockingTaskRunner<String> createTokenStateRequestContext;
     private final BlockingTaskRunner<AuthorizationCodeTokens> getTokenStateRequestContext;
+    private final BlockingTaskRunner<SecurityIdentity> authenticationCompletionActionContext;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public CodeAuthenticationMechanism(BlockingSecurityExecutor blockingExecutor) {
         this.createTokenStateRequestContext = new BlockingTaskRunner<>(blockingExecutor);
         this.getTokenStateRequestContext = new BlockingTaskRunner<>(blockingExecutor);
+        this.authenticationCompletionActionContext = new BlockingTaskRunner<>(blockingExecutor);
     }
 
     public Uni<SecurityIdentity> authenticate(RoutingContext context,
@@ -262,17 +266,14 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
             TenantConfigContext tenantContext, String redirectUri, Redirect.Location location) {
         List<OidcRedirectFilter> redirectFilters = tenantContext.getOidcRedirectFilters(location);
         if (!redirectFilters.isEmpty()) {
+            context.put(TenantConfigContext.class.getName(), tenantContext);
             OidcRedirectContext redirectContext = new OidcRedirectContext(context, tenantContext.getOidcTenantConfig(),
                     redirectUri, MultiMap.caseInsensitiveMultiMap());
             for (OidcRedirectFilter filter : redirectFilters) {
                 filter.filter(redirectContext);
             }
-            MultiMap queries = redirectContext.additionalQueryParams();
-            if (!queries.isEmpty()) {
-                String encoded = OidcCommonUtils.encodeForm(new io.vertx.mutiny.core.MultiMap(queries)).toString();
-                String sep = redirectUri.lastIndexOf("?") > 0 ? AMP : QUESTION_MARK;
-                redirectUri += (sep + encoded);
-            }
+            redirectUri = OidcUtils.addQueryParamsToUri(redirectUri, redirectContext.additionalQueryParams());
+
         }
         return redirectUri;
     }
@@ -360,6 +361,7 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                         return authenticate(identityProviderManager, context,
                                 new IdTokenCredential(currentIdToken,
                                         isInternalIdToken(currentIdToken, configContext)))
+                                .flatMap(new AuthenticationCompletionCall(context, decryptedtokens))
                                 .call(new LogoutCall(context, configContext, decryptedtokens.getIdToken())).onFailure()
                                 .recoverWithUni(new Function<Throwable, Uni<? extends SecurityIdentity>>() {
                                     @Override
@@ -473,6 +475,7 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                     }
 
                 });
+
     }
 
     private Uni<SecurityIdentity> refreshIsNotPossible(RoutingContext context, TenantConfigContext configContext,
@@ -924,7 +927,8 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                                             return identity;
                                         }
                                     }
-                                }).onFailure().transform(new Function<Throwable, Throwable>() {
+                                })
+                                .onFailure().transform(new Function<Throwable, Throwable>() {
                                     @Override
                                     public Throwable apply(Throwable tInner) {
                                         if (tInner instanceof AuthenticationRedirectException) {
@@ -936,6 +940,7 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                                         return new AuthenticationCompletionException(errorMessage, tInner);
                                     }
                                 });
+                        //.call(new AuthenticationCompletionCall(context, configContext));
                     }
 
                 });
@@ -1392,6 +1397,7 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
                                             return new AuthenticationFailedException(tInner, tokenMap(currentIdToken));
                                         }
                                     });
+                            //.call(new AuthenticationCompletionCall(context, configContext));
                         }
                     }
                 });
@@ -1573,6 +1579,37 @@ public class CodeAuthenticationMechanism extends AbstractOidcAuthenticationMecha
             return VOID_UNI;
         }
 
+    }
+
+    private class AuthenticationCompletionCall implements Function<SecurityIdentity, Uni<? extends SecurityIdentity>> {
+        RoutingContext context;
+        AuthorizationCodeTokens codeTokens;
+
+        AuthenticationCompletionCall(RoutingContext context, AuthorizationCodeTokens codeTokens) {
+            this.context = context;
+            this.codeTokens = codeTokens;
+        }
+
+        @Override
+        public Uni<SecurityIdentity> apply(SecurityIdentity identity) {
+            AuthenticationCompletionContext ac = new AuthenticationCompletionContext(context, codeTokens,
+                    resolver.getTokenStateManager());
+            return runAuthenticationCompletionActions(resolver.authorizationCodeFlowCompletionActions(), 0, identity, ac);
+        }
+
+        private Uni<SecurityIdentity> runAuthenticationCompletionActions(List<AuthenticationCompletionAction> actions,
+                int i, SecurityIdentity identity, AuthenticationCompletionContext ac) {
+            if (i == actions.size()) {
+                return Uni.createFrom().item(identity);
+            }
+            return actions.get(i).action(ac, identity, authenticationCompletionActionContext)
+                    .onItem().transformToUni(new Function<SecurityIdentity, Uni<? extends SecurityIdentity>>() {
+                        @Override
+                        public Uni<? extends SecurityIdentity> apply(SecurityIdentity identity) {
+                            return runAuthenticationCompletionActions(actions, i + 1, identity, ac);
+                        }
+                    });
+        }
     }
 
     private static Map<String, Object> tokenMap(String token) {
