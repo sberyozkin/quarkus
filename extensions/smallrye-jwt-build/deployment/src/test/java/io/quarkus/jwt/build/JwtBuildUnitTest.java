@@ -1,12 +1,17 @@
 package io.quarkus.jwt.build;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.security.interfaces.RSAPublicKey;
 
 import org.eclipse.microprofile.jwt.Claims;
-import org.jose4j.jwt.JwtClaims;
-import org.jose4j.jwt.consumer.JwtConsumerBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 
 import io.quarkus.test.QuarkusExtensionTest;
 import io.smallrye.jwt.build.Jwt;
@@ -25,11 +30,10 @@ public class JwtBuildUnitTest {
     public void signToken() throws Exception {
         String jwt = Jwt.preferredUserName("alice").sign();
 
-        JwtClaims jwtClaims = new JwtConsumerBuilder()
-                .setVerificationKey(KeyUtils.readPublicKey("/publicKey.pem"))
-                .build()
-                .processToClaims(jwt);
-        assertEquals("alice", jwtClaims.getClaimValue(Claims.preferred_username.name()));
+        SignedJWT signedJWT = SignedJWT.parse(jwt);
+        assertTrue(signedJWT.verify(new RSASSAVerifier((RSAPublicKey) KeyUtils.readPublicKey("/publicKey.pem"))));
+        JWTClaimsSet jwtClaims = signedJWT.getJWTClaimsSet();
+        assertEquals("alice", jwtClaims.getStringClaim(Claims.preferred_username.name()));
 
     }
 }
