@@ -4,10 +4,14 @@ import static org.hamcrest.Matchers.equalTo;
 
 import java.security.PrivateKey;
 
-import org.jose4j.jws.AlgorithmIdentifiers;
-import org.jose4j.jws.JsonWebSignature;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSObject;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.RSASSASigner;
 
 import io.quarkus.test.QuarkusExtensionTest;
 import io.restassured.RestAssured;
@@ -51,11 +55,9 @@ public class JwtParserUnitTest {
                 + "\"exp\":" + (System.currentTimeMillis() / 1000 + 5) + ","
                 + "}";
 
-        JsonWebSignature jws = new JsonWebSignature();
-        jws.setPayload(payload);
-        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
         PrivateKey privateKey = KeyUtils.readPrivateKey("privateKey.pem");
-        jws.setKey(privateKey);
-        return jws.getCompactSerialization();
+        JWSObject jws = new JWSObject(new JWSHeader(JWSAlgorithm.RS256), new Payload(payload));
+        jws.sign(new RSASSASigner(privateKey));
+        return jws.serialize();
     }
 }

@@ -6,6 +6,7 @@ import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.EdECPublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,9 +15,7 @@ import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 
-import org.jose4j.jwk.JsonWebKey.OutputControlLevel;
-import org.jose4j.jwk.PublicJsonWebKey;
-import org.jose4j.lang.JoseException;
+import com.nimbusds.jose.jwk.JWK;
 
 import io.quarkus.oidc.client.registration.runtime.OidcClientRegistrationException;
 import io.quarkus.oidc.common.runtime.AbstractJsonObject;
@@ -186,8 +185,12 @@ public class ClientMetadata extends AbstractJsonObject {
 
         private static Map<String, Object> convertPublicKeyToJwk(PublicKey key) {
             try {
-                return PublicJsonWebKey.Factory.newPublicJwk(key).toParams(OutputControlLevel.PUBLIC_ONLY);
-            } catch (JoseException ex) {
+                return JWK.parseFromPEMEncodedObjects(
+                        "-----BEGIN PUBLIC KEY-----\n"
+                                + Base64.getEncoder().encodeToString(key.getEncoded())
+                                + "\n-----END PUBLIC KEY-----")
+                        .toJSONObject();
+            } catch (Exception ex) {
                 throw new OidcClientRegistrationException(ex);
             }
         }

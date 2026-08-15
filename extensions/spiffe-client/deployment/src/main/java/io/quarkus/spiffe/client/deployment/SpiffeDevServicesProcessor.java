@@ -14,12 +14,12 @@ import java.util.function.BooleanSupplier;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
-import org.jose4j.jwk.EcJwkGenerator;
-import org.jose4j.jwk.EllipticCurveJsonWebKey;
-import org.jose4j.jwk.JsonWebKey;
-import org.jose4j.keys.EllipticCurves;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 
 import io.quarkus.deployment.IsDevServicesSupportedByLaunchMode;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -123,7 +123,7 @@ public final class SpiffeDevServicesProcessor {
         private final Transport transport;
         private final int httpPort;
         private final Set<String> errorMessages;
-        private volatile EllipticCurveJsonWebKey signingKey;
+        private volatile ECKey signingKey;
         private volatile Vertx vertx;
         private volatile HttpServer grpcServer;
         private volatile HttpServer httpServer;
@@ -153,7 +153,7 @@ public final class SpiffeDevServicesProcessor {
 
         private void serveBundleEndpoint(HttpServerRequest request) {
             try {
-                JsonObject jwk = new JsonObject(signingKey.toJson(JsonWebKey.OutputControlLevel.PUBLIC_ONLY));
+                JsonObject jwk = new JsonObject(signingKey.toPublicJWK().toJSONString());
                 JsonObject bundle = new JsonObject()
                         .put("spiffe_sequence", 1)
                         .put("spiffe_refresh_hint", 300)
@@ -281,8 +281,8 @@ public final class SpiffeDevServicesProcessor {
                         .expiresIn(DEFAULT_TTL_SECONDS)
                         .jws()
                         .algorithm(SignatureAlgorithm.ES256)
-                        .keyId(signingKey.getKeyId())
-                        .sign(signingKey.getPrivateKey());
+                        .keyId(signingKey.getKeyID())
+                        .sign(signingKey.toECPrivateKey());
                 JWTSVID svid = JWTSVID.newBuilder()
                         .setSpiffeId(DEFAULT_SPIFFE_ID)
                         .setSvid(token)
@@ -336,9 +336,10 @@ public final class SpiffeDevServicesProcessor {
         @Override
         public void start() {
             try {
-                signingKey = EcJwkGenerator.generateJwk(EllipticCurves.P256);
-                signingKey.setKeyId("quarkus-spiffe-dev-svc");
-                signingKey.setUse("jwt-svid");
+                signingKey = new ECKeyGenerator(Curve.P_256)
+                        .keyID("quarkus-spiffe-dev-svc")
+                        .keyUse(new KeyUse("jwt-svid"))
+                        .generate();
             } catch (Exception e) {
                 errorMessages.add("Failed to generate EC P-256 signing key: " + e.getMessage());
                 throw new RuntimeException("Failed to generate EC P-256 signing key", e);

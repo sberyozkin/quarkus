@@ -9,9 +9,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.jwt.Claims;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
-import org.jose4j.jwt.JwtClaims;
-import org.jose4j.jwt.consumer.InvalidJwtException;
-import org.jose4j.jwt.consumer.JwtConsumerBuilder;
+
+import com.nimbusds.jwt.SignedJWT;
 
 import io.quarkus.oidc.AccessTokenCredential;
 import io.quarkus.oidc.IdToken;
@@ -20,6 +19,7 @@ import io.quarkus.oidc.OIDCException;
 import io.quarkus.security.credential.TokenCredential;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.jwt.auth.cdi.NullJsonWebToken;
+import io.smallrye.jwt.common.JwtClaims;
 
 @Priority(2)
 @Alternative
@@ -68,14 +68,12 @@ public class OidcJsonWebTokenProducer {
             }
             JwtClaims jwtClaims;
             try {
-                jwtClaims = new JwtConsumerBuilder()
-                        .setSkipSignatureVerification()
-                        .setSkipAllValidators()
-                        .build().processToClaims(credential.getToken());
-            } catch (InvalidJwtException e) {
+                SignedJWT signedJWT = SignedJWT.parse(credential.getToken());
+                jwtClaims = new JwtClaims(signedJWT.getJWTClaimsSet().getClaims());
+            } catch (Exception e) {
                 throw new OIDCException(e);
             }
-            jwtClaims.setClaim(Claims.raw_token.name(), credential.getToken());
+            jwtClaims.put(Claims.raw_token.name(), credential.getToken());
             return new OidcJwtCallerPrincipal(jwtClaims, credential);
         }
         String tokenType = type == AccessTokenCredential.class ? "access" : "ID";

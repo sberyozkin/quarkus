@@ -1,6 +1,7 @@
 package io.quarkus.it.keycloak;
 
 import java.net.URI;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
@@ -24,9 +25,12 @@ import jakarta.ws.rs.core.UriInfo;
 
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
-import org.jose4j.jwk.JsonWebKeySet;
-import org.jose4j.jwk.RsaJsonWebKey;
-import org.jose4j.jwk.RsaJwkGenerator;
+
+import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 
 import io.quarkus.oidc.runtime.OidcUtils;
 import io.smallrye.jwt.algorithm.SignatureAlgorithm;
@@ -43,7 +47,8 @@ public class OidcResource {
 
     @Context
     UriInfo ui;
-    RsaJsonWebKey key;
+    RSAKey key;
+    PrivateKey privateKey;
     private volatile boolean introspection;
     private volatile boolean rotate;
     private volatile int jwkEndpointCallCount;
@@ -58,10 +63,12 @@ public class OidcResource {
 
     @PostConstruct
     public void init() throws Exception {
-        key = RsaJwkGenerator.generateJwk(2048);
-        key.setUse("sig");
-        key.setKeyId("1");
-        key.setAlgorithm("RS256");
+        key = new RSAKeyGenerator(2048)
+                .keyUse(KeyUse.SIGNATURE)
+                .keyID("1")
+                .algorithm(new Algorithm("RS256"))
+                .generate();
+        privateKey = key.toRSAPrivateKey();
     }
 
     @GET
@@ -90,7 +97,7 @@ public class OidcResource {
         if (introspection) {
             return "{\"keys\":[]}";
         }
-        String json = new JsonWebKeySet(key).toJson();
+        String json = new JWKSet(key).toString();
         if (rotate) {
             json = json.replace("\"1\"", "\"2\"");
         }
@@ -453,7 +460,7 @@ public class OidcResource {
         }
 
         return builder.jws().keyId(kid)
-                .sign(key.getPrivateKey());
+                .sign(privateKey);
     }
 
     private String largeJwt(String audience, String kid) {
@@ -469,11 +476,11 @@ public class OidcResource {
                 .audience(audience);
 
         return builder.jws().keyId(kid)
-                .sign(key.getPrivateKey());
+                .sign(privateKey);
     }
 
     private String jwtWithMultipleAudiences(Set<String> audience) {
         return Jwt.audience(audience)
-                .sign(key.getPrivateKey());
+                .sign(privateKey);
     }
 }

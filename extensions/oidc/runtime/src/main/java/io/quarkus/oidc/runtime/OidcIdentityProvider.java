@@ -3,8 +3,10 @@ package io.quarkus.oidc.runtime;
 import static io.quarkus.oidc.runtime.OidcUtils.validateAndCreateIdentity;
 import static io.quarkus.vertx.http.runtime.security.HttpSecurityUtils.getRoutingContextAttribute;
 
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
+import java.text.ParseException;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -14,10 +16,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.jwt.Claims;
 import org.jboss.logging.Logger;
-import org.jose4j.jwk.PublicJsonWebKey;
-import org.jose4j.jws.JsonWebSignature;
-import org.jose4j.lang.JoseException;
-import org.jose4j.lang.UnresolvableKeyException;
+
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.jwk.AsymmetricJWK;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jwt.SignedJWT;
 
 import io.quarkus.oidc.AccessTokenCredential;
 import io.quarkus.oidc.AuthorizationCodeTokens;
@@ -40,6 +44,8 @@ import io.quarkus.security.identity.SecurityIdentity;
 import io.quarkus.security.identity.request.TokenAuthenticationRequest;
 import io.quarkus.security.runtime.QuarkusSecurityIdentity;
 import io.quarkus.security.spi.runtime.BlockingSecurityExecutor;
+import io.smallrye.jwt.auth.JwtVerifier;
+import io.smallrye.jwt.auth.UnresolvableKeyException;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 
@@ -267,21 +273,38 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
                                 throw new AuthenticationFailedException(invalidDPoPProofMap(request.getToken()));
                             }
 
-                            PublicJsonWebKey publicJsonWebKey = null;
+                            JWK jwk;
                             try {
-                                publicJsonWebKey = PublicJsonWebKey.Factory.newPublicJwk(jwkProof.getMap());
-                            } catch (JoseException ex) {
+                                jwk = JWK.parse(jwkProof.getMap());
+                            } catch (ParseException ex) {
                                 LOG.warn("DPoP proof jwk header does not represent a valid JWK key");
                                 throw new AuthenticationFailedException(ex, invalidDPoPProofMap(request.getToken()));
                             }
 
-                            if (publicJsonWebKey.getPrivateKey() != null) {
-                                LOG.warn("DPoP proof JWK key is a private key but it must be a public key");
+                            if (!(jwk instanceof AsymmetricJWK)) {
+                                LOG.warn("DPoP proof JWK key must be an asymmetric key");
                                 throw new AuthenticationFailedException(invalidDPoPProofMap(request.getToken()));
                             }
+                            AsymmetricJWK asymmetricJwk = (AsymmetricJWK) jwk;
 
-                            byte[] jwkProofDigest = publicJsonWebKey.calculateThumbprint("SHA-256");
-                            String jwkProofThumbprint = OidcCommonUtils.base64UrlEncode(jwkProofDigest);
+                            try {
+                                if (asymmetricJwk.toPrivateKey() != null) {
+                                    LOG.warn("DPoP proof JWK key is a private key but it must be a public key");
+                                    throw new AuthenticationFailedException(invalidDPoPProofMap(request.getToken()));
+                                }
+                            } catch (JOSEException ex) {
+                                LOG.warn("DPoP proof jwk key validation failed");
+                                throw new AuthenticationFailedException(ex, invalidDPoPProofMap(request.getToken()));
+                            }
+
+                            String jwkProofThumbprint;
+                            try {
+                                // computeThumbprint() computes the SHA-256 JWK thumbprint (RFC 7638)
+                                jwkProofThumbprint = jwk.computeThumbprint().toString();
+                            } catch (JOSEException ex) {
+                                LOG.warn("DPoP proof JWK thumbprint computation failed");
+                                throw new AuthenticationFailedException(ex, invalidDPoPProofMap(request.getToken()));
+                            }
 
                             if (!dpopJwkThumbprint.equals(jwkProofThumbprint)) {
                                 LOG.warn("DPoP access token JWK thumbprint does not match the DPoP proof JWK thumbprint");
@@ -289,15 +312,20 @@ public class OidcIdentityProvider implements IdentityProvider<TokenAuthenticatio
                             }
 
                             try {
-                                JsonWebSignature jws = new JsonWebSignature();
-                                jws.setAlgorithmConstraints(OidcProvider.ASYMMETRIC_ALGORITHM_CONSTRAINTS);
-                                jws.setCompactSerialization((String) requestData.get(OidcUtils.DPOP_PROOF));
-                                jws.setKey(publicJsonWebKey.getPublicKey());
-                                if (!jws.verifySignature()) {
+                                SignedJWT dpopJws = SignedJWT.parse((String) requestData.get(OidcUtils.DPOP_PROOF));
+                                String dpopAlg = dpopJws.getHeader().getAlgorithm().getName();
+                                if (!OidcProvider.ASYMMETRIC_ALLOWED_ALGORITHMS.contains(dpopAlg)) {
+                                    LOG.warn("DPoP proof token algorithm is not allowed");
+                                    throw new AuthenticationFailedException(invalidDPoPProofMap(request.getToken()));
+                                }
+                                Key verifyKey = asymmetricJwk.toPublicKey();
+                                JWSVerifier dpopVerifier = JwtVerifier.createVerifier(verifyKey,
+                                        dpopJws.getHeader().getAlgorithm());
+                                if (!dpopJws.verify(dpopVerifier)) {
                                     LOG.warn("DPoP proof token signature is invalid");
                                     throw new AuthenticationFailedException(invalidDPoPProofMap(request.getToken()));
                                 }
-                            } catch (JoseException ex) {
+                            } catch (ParseException | JOSEException ex) {
                                 LOG.warn("DPoP proof token signature can not be verified");
                                 throw new AuthenticationFailedException(ex, invalidDPoPProofMap(request.getToken()));
                             }
