@@ -2,19 +2,19 @@ package io.quarkus.oidc.runtime;
 
 import java.security.Key;
 import java.security.cert.X509Certificate;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import org.jboss.logging.Logger;
-import org.jose4j.jws.JsonWebSignature;
-import org.jose4j.jwx.JsonWebStructure;
-import org.jose4j.lang.UnresolvableKeyException;
 
 import io.quarkus.oidc.OidcTenantConfig;
 import io.quarkus.oidc.TokenCertificateValidator;
 import io.quarkus.runtime.configuration.ConfigurationException;
 import io.quarkus.vertx.http.runtime.security.HttpSecurityUtils;
+import io.smallrye.jws.JsonWebSignature;
+import io.smallrye.jwt.auth.UnresolvableKeyException;
 import io.vertx.ext.auth.impl.CertificateHelper;
 
 public class CertChainPublicKeyResolver implements RefreshableVerificationKeyResolver {
@@ -40,11 +40,10 @@ public class CertChainPublicKeyResolver implements RefreshableVerificationKeyRes
     }
 
     @Override
-    public Key resolveKey(JsonWebSignature jws, List<JsonWebStructure> nestingContext)
-            throws UnresolvableKeyException {
+    public Key resolveKey(JsonWebSignature jws) throws UnresolvableKeyException {
 
         try {
-            List<X509Certificate> chain = jws.getCertificateChainHeaderValue();
+            List<X509Certificate> chain = jws.headers().x509CertificateChain();
             if (chain == null) {
                 LOG.debug("Token does not have an 'x5c' certificate chain header");
                 return null;
@@ -58,8 +57,6 @@ public class CertChainPublicKeyResolver implements RefreshableVerificationKeyRes
             //TODO: support revocation lists
             CertificateHelper.checkValidity(chain, null);
             if (chain.size() == 1) {
-                // CertificateHelper.checkValidity does not currently
-                // verify the certificate signature if it is a single certificate chain
                 final X509Certificate root = chain.get(0);
                 root.verify(root.getPublicKey());
             }
@@ -76,21 +73,18 @@ public class CertChainPublicKeyResolver implements RefreshableVerificationKeyRes
             if (!certificateValidators.isEmpty()) {
                 LOG.debug("Running custom TokenCertificateValidators");
                 for (TokenCertificateValidator validator : certificateValidators) {
-                    validator.validate(oidcConfig, chain, jws.getUnverifiedPayload());
+                    validator.validate(oidcConfig, chain, jws.unverifiedPayload());
                 }
             }
 
             // Finally, check the leaf certificate if required
             if (expectedLeafCertificateName.isPresent()) {
-                // Compare the leaf certificate common name against the configured value
                 String leafCertificateName = HttpSecurityUtils.getCommonName(chain.get(0).getSubjectX500Principal());
                 if (!expectedLeafCertificateName.get().equals(leafCertificateName)) {
                     LOG.errorf("Wrong leaf certificate common name: %s", leafCertificateName);
                     throw new UnresolvableKeyException("Wrong leaf certificate common name");
                 }
             } else if (certificateValidators.isEmpty()) {
-                // No custom validators are registered and no leaf certificate CN is configured
-                // Check that the truststore contains a leaf certificate thumbprint
                 LOG.debug("Checking a thumbprint of the leaf chain certificate");
                 String thumbprint = TrustStoreUtils.calculateThumprint(chain.get(0));
                 if (!thumbprints.contains(thumbprint)) {
@@ -102,6 +96,9 @@ public class CertChainPublicKeyResolver implements RefreshableVerificationKeyRes
             return chain.get(0).getPublicKey();
         } catch (UnresolvableKeyException ex) {
             throw ex;
+        } catch (ParseException ex) {
+            LOG.error("Token 'x5c' certificate chain can not be parsed");
+            throw new UnresolvableKeyException("Token 'x5c' certificate chain can not be parsed", ex);
         } catch (Exception ex) {
             throw new UnresolvableKeyException("Invalid certificate chain", ex);
         }
