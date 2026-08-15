@@ -25,12 +25,12 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 
 import org.jboss.logging.Logger;
-import org.jose4j.keys.X509Util;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.common.ListOrSingle;
 import com.github.tomakehurst.wiremock.extension.TemplateHelperProviderExtension;
 import com.google.common.collect.ImmutableSet;
+import com.nimbusds.jose.util.X509CertUtils;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import io.smallrye.jwt.build.Jwt;
@@ -380,7 +380,7 @@ public class OidcWiremockTestResource implements QuarkusTestResourceLifecycleMan
 
     public static X509Certificate getCertificate() {
         try {
-            return new X509Util().fromBase64Der(ENCODED_X5C);
+            return X509CertUtils.parse(java.util.Base64.getDecoder().decode(ENCODED_X5C));
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

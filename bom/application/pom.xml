@@ -53,7 +53,7 @@
         <smallrye-open-api.version>4.3.5</smallrye-open-api.version>
         <smallrye-graphql.version>3.0.0.Beta6</smallrye-graphql.version>
         <smallrye-fault-tolerance.version>6.11.2</smallrye-fault-tolerance.version>
-        <smallrye-jwt.version>4.6.3</smallrye-jwt.version>
+        <smallrye-jwt.version>4.6.4-SNAPSHOT</smallrye-jwt.version>
         <smallrye-context-propagation.version>2.3.0</smallrye-context-propagation.version>
         <smallrye-reactive-streams-operators.version>1.0.13</smallrye-reactive-streams-operators.version>
         <smallrye-reactive-types-converter.version>3.0.3</smallrye-reactive-types-converter.version>
@@ -209,8 +209,7 @@
         <jline.version>4.2.1</jline.version> <!-- Keep in sync with dekorate -->
         <!-- these two artifacts needs to be compatible together -->
         <strimzi-oauth.version>0.16.1</strimzi-oauth.version>
-        <strimzi-oauth.nimbus.version>10.9.1</strimzi-oauth.nimbus.version>
-        <jose4j.version>0.9.6</jose4j.version>
+        <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
         <java-buildpack-client.version>0.0.17</java-buildpack-client.version>
         <crac.version>1.5.0</crac.version>
         <sshd-common.version>2.19.0</sshd-common.version>
@@ -4878,12 +4877,7 @@
             <dependency>
                 <groupId>com.nimbusds</groupId>
                 <artifactId>nimbus-jose-jwt</artifactId>
-                <version>${strimzi-oauth.nimbus.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bitbucket.b_c</groupId>
-                <artifactId>jose4j</artifactId>
-                <version>${jose4j.version}</version>
+                <version>${nimbus-jose-jwt.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.maven</groupId>

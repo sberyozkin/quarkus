@@ -9,14 +9,15 @@ import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.KeyStore.Entry;
 import java.security.KeyStore.TrustedCertificateEntry;
+import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
 import org.jboss.logging.Logger;
-import org.jose4j.keys.X509Util;
 
 import io.quarkus.oidc.common.runtime.OidcCommonUtils;
 import io.quarkus.runtime.util.ClassPathUtils;
@@ -84,6 +85,12 @@ public class TrustStoreUtils {
     }
 
     public static String calculateThumprint(X509Certificate cert) {
-        return X509Util.x5tS256(cert);
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(cert.getEncoded());
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to calculate certificate thumbprint", e);
+        }
     }
 }
