@@ -49,10 +49,20 @@ public class MemoryCache<T> {
     public void add(String key, T result) {
         if (cacheSize > 0) {
             startTimerIfNotRunning();
-            if (!prepareSpaceForNewCacheEntry()) {
+            boolean reserved = prepareSpaceForNewCacheEntry();
+            if (!reserved) {
                 clearCache();
             }
-            cacheMap.put(key, new CacheEntry<>(result, now()));
+            CacheEntry<T> previous = cacheMap.put(key, new CacheEntry<>(result, now()));
+            if (reserved) {
+                if (previous != null) {
+                    // Another thread already cached the value for this key
+                    size.decrementAndGet();
+                }
+            } else {
+                // The cache size was reset to 0 before the entry was added
+                size.incrementAndGet();
+            }
         }
     }
 
